@@ -122,8 +122,7 @@ public class Richard_OpMode extends LinearOpMode {
         leftDrive.setPower(1);
         rightDrive.setPower(-1);
 
-        sleep(1750);
-
+        sleep(3250);
         // Drive Forward
 
         leftDrive.setPower(0.5);
@@ -131,7 +130,7 @@ public class Richard_OpMode extends LinearOpMode {
 
         // Wait for 5 seconds
 
-        sleep(1200);
+        sleep(2000);
 
         // stop
 
