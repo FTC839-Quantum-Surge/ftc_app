@@ -225,5 +225,11 @@ public class Robot
 
     }
 
+    public void SetLiftMotorPower(double dPower )
+    {
+        lift.setPower(dPower);
+    }
+
+
  }
 
