@@ -146,7 +146,7 @@ public class Robot
         intake         .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
 
         fold           .setMode( DcMotor.RunMode.RUN_TO_POSITION     );
-        lift           .setMode( DcMotor.RunMode.RUN_TO_POSITION     );
+        lift           .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER     );
 
         // ------------------------------------------------------------------
         // Define and initialize ALL installed servos.
@@ -228,6 +228,7 @@ public class Robot
     public void SetLiftMotorPower(double dPower )
     {
         lift.setPower(dPower);
+
     }
 
 
