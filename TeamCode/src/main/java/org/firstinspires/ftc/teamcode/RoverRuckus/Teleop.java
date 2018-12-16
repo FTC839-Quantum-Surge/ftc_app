@@ -59,6 +59,7 @@ public class Teleop extends OpMode{
     Robot robot       = new Robot(); // use the class created to define a Pushbot's hardware
     double          clawOffset  = 0.0 ;                  // Servo mid position
     final double    CLAW_SPEED  = 0.02 ;                 // sets rate to move servo
+    private  boolean    bStartPressed = false;
 
     /*
      * Code to run ONCE when the driver hits INIT
@@ -103,31 +104,56 @@ public class Teleop extends OpMode{
 
         robot.SetDrivePower(left,right);
 
+        /*
         if (gamepad1.dpad_up)
         {
-            robot.SetLiftMotorPower(0.5 );
+            robot.SetLiftMotorPower( 1 );
         }
-        else
+        else if (gamepad1.dpad_down)
         {
-            robot.SetLiftMotorPower( 0);
+                robot.SetLiftMotorPower(-1);
+        } else {
+                robot.SetLiftMotorPower(0);
         }
+        */
+
+        if (gamepad1.start == true)
+            bStartPressed = true;
 
 
-        if (gamepad1.dpad_down)
+        if ((gamepad1.start == false) && (bStartPressed == true))
         {
-            robot.SetLiftMotorPower(-0.5 );
-        }
-        else
-        {
-            robot.SetLiftMotorPower( 0 );
+            bStartPressed = false;
+
+            if (robot.IsClawOpen())
+                robot.CloseClaw();
+            else
+                robot.OpenClaw();
         }
 
+        if (gamepad1.y)
+            robot.SetLiftTarget( Robot.LiftPosEnum.Top );
+
+        if (gamepad1.a)
+            robot.SetLiftTarget( Robot.LiftPosEnum.Bottom );
+
+        if (gamepad1.b)
+            robot.SetLiftTarget( Robot.LiftPosEnum.Hook );
+
+
+        robot.LiftPeriodicCheck( gamepad1.right_trigger - gamepad1.left_trigger);
 
         // Send telemetry message to signify robot running;
         // telemetry.addData("claw",  "Offset = %.2f", clawOffset);
 
-        telemetry.addData("left",  "%.2f", left);
-        telemetry.addData("right", "%.2f", right);
+        double t = robot.GetLimitTopVal();
+        double b = robot.GetLimitBottomVal();
+
+        telemetry.addData("Pos",  "%d", robot.LiftPos());
+        telemetry.addData("LimitTop", t);
+        telemetry.addData("LimitBottom", b );
+        telemetry.addData("LeftTrigger", gamepad1.left_trigger );
+        telemetry.addData( "RightTrigger", gamepad1.right_trigger );
     }
 
     /*
