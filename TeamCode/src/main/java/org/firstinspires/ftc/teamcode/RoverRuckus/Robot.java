@@ -29,7 +29,9 @@
 
 package org.firstinspires.ftc.teamcode.RoverRuckus;
 
+import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -43,12 +45,21 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  */
 public class Robot
 {
-    // ----------------------------------------------------------------------
-    // Private Member Variables
-    // ----------------------------------------------------------------------
+    public enum ClawStateEnum
+    {
+        Unknown,
+        Closed,
+        Open
+    }
 
-    private HardwareMap m_hwMap     =  null;
-    private ElapsedTime m_period    = new ElapsedTime();
+    public enum LiftPosEnum
+    {
+        None,
+        Top,
+        Hook,
+        Transfer,
+        Bottom
+    }
 
     // ----------------------------------------------------------------------
     // Private Constants
@@ -64,22 +75,42 @@ public class Robot
     private static final String LIFT_MOTOR                  = "lift";
 
     private static final String DUMP_SERVO                  = "dump";
-    private static final String LATCH_SERVO                 = "latch";
+    private static final String CLAW_SERVO                  = "claw";
+
+    private static final String LIMIT_TOP                   = "limitTop";
+    private static final String LIMIT_BOTTOM                = "limitBottom";
+
+    private static final int   LIFT_TOP                     = 22200;
+    private static final int   LIFT_LATCH                   = 9250;
 
     // ----------------------------------------------------------------------
     // Public Member Variables
     // ----------------------------------------------------------------------
 
-    private DcMotor  leftFrontDrive      = null;
-    private DcMotor  leftRearDrive       = null;
-    private DcMotor  rightFrontDrive     = null;
-    private DcMotor  rightRearDrive      = null;
-    private DcMotor  intake              = null;
-    private DcMotor  fold                = null;
-    private DcMotor  lift                = null;
+    private HardwareMap m_hwMap     = null;
+    private ElapsedTime m_period    = new ElapsedTime();
 
-    private Servo    dump                = null;
-    private Servo    latch               = null;
+    private DcMotor  m_leftFrontDrive      = null;
+    private DcMotor  m_leftRearDrive       = null;
+    private DcMotor  m_rightFrontDrive     = null;
+    private DcMotor  m_rightRearDrive      = null;
+    private DcMotor  m_intake              = null;
+    private DcMotor  m_fold                = null;
+    private DcMotor  m_lift                = null;
+
+    private Servo    m_dump                = null;
+    private Servo    m_claw                = null;
+
+    // Using Analog inputs for Limit Switches due to
+    // issue with hub not powering on when digital input held low
+
+    private AnalogInput m_limitTop         = null;
+    private AnalogInput m_limitBottom      = null;
+
+    private int      m_nLiftEncHomePos     = 0;
+
+    private ClawStateEnum   m_clawState    = ClawStateEnum.Unknown;
+    private LiftPosEnum     m_targetPos    = LiftPosEnum.None;
 
     // //////////////////////////////////////////////////////////////////////
     // Constructor
@@ -105,59 +136,82 @@ public class Robot
         // Define and Initialize Motors
         // ------------------------------------------------------------------
 
-        leftFrontDrive  = m_hwMap.get( DcMotor.class, LEFT_FRONT_DRIVE_MOTOR    );
-        leftRearDrive   = m_hwMap.get( DcMotor.class, LEFT_REAR_DRIVE_MOTOR     );
-        rightFrontDrive = m_hwMap.get( DcMotor.class, RIGHT_FRONT_DRIVE_MOTOR   );
-        rightRearDrive  = m_hwMap.get( DcMotor.class, RIGHT_REAR_DRIVE_MOTOR    );
-        intake          = m_hwMap.get( DcMotor.class, INTAKE_MOTOR              );
-        fold            = m_hwMap.get( DcMotor.class, FOLD_MOTOR                );
-        lift            = m_hwMap.get( DcMotor.class, LIFT_MOTOR                );
+        m_leftFrontDrive  = m_hwMap.get( DcMotor.class, LEFT_FRONT_DRIVE_MOTOR    );
+        m_leftRearDrive   = m_hwMap.get( DcMotor.class, LEFT_REAR_DRIVE_MOTOR     );
+        m_rightFrontDrive = m_hwMap.get( DcMotor.class, RIGHT_FRONT_DRIVE_MOTOR   );
+        m_rightRearDrive  = m_hwMap.get( DcMotor.class, RIGHT_REAR_DRIVE_MOTOR    );
+        m_intake          = m_hwMap.get( DcMotor.class, INTAKE_MOTOR              );
+        m_fold            = m_hwMap.get( DcMotor.class, FOLD_MOTOR                );
+        m_lift            = m_hwMap.get( DcMotor.class, LIFT_MOTOR                );
+
+        m_limitTop        = m_hwMap.get( AnalogInput.class, LIMIT_TOP          );
+        m_limitBottom     = m_hwMap.get( AnalogInput.class, LIMIT_BOTTOM       );
+
+        // ------------------------------------------------------------------
+        //
+        // ------------------------------------------------------------------
+
+        //m_limitTop   .setMode( DigitalChannel.Mode.INPUT );
+        //m_limitBottom.setMode( DigitalChannel.Mode.INPUT );
 
         // ------------------------------------------------------------------
         // Set direction of drive motors (one side needs to be opposite)
         // ------------------------------------------------------------------
 
-        leftFrontDrive  .setDirection( DcMotor.Direction.FORWARD );
-        leftRearDrive   .setDirection( DcMotor.Direction.FORWARD );
+        m_leftFrontDrive  .setDirection( DcMotor.Direction.FORWARD );
+        m_leftRearDrive   .setDirection( DcMotor.Direction.FORWARD );
 
-        rightFrontDrive .setDirection( DcMotor.Direction.REVERSE );
-        rightRearDrive  .setDirection( DcMotor.Direction.REVERSE );
+        m_rightFrontDrive .setDirection( DcMotor.Direction.REVERSE );
+        m_rightRearDrive  .setDirection( DcMotor.Direction.REVERSE );
+
+        m_lift            .setDirection( DcMotor.Direction.REVERSE );
 
         // ------------------------------------------------------------------
         // Set all motors to zero power
         // ------------------------------------------------------------------
 
-        leftFrontDrive .setPower( 0 );
-        leftRearDrive  .setPower( 0 );
-        rightFrontDrive.setPower( 0 );
-        rightRearDrive .setPower( 0 );
-        intake         .setPower( 0 );
-        fold           .setPower( 0 );
-        lift           .setPower( 0 );
+        m_leftFrontDrive .setPower( 0 );
+        m_leftRearDrive  .setPower( 0 );
+        m_rightFrontDrive.setPower( 0 );
+        m_rightRearDrive .setPower( 0 );
+        m_intake         .setPower( 0 );
+        m_fold           .setPower( 0 );
+        m_lift           .setPower( 0 );
 
         // ------------------------------------------------------------------
         // Set all motors run Mode
         // ------------------------------------------------------------------
 
-        leftFrontDrive .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
-        leftRearDrive  .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
-        rightFrontDrive.setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
-        rightRearDrive .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
-        intake         .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
+        m_lift            .setMode (DcMotor.RunMode.STOP_AND_RESET_ENCODER );
 
-        fold           .setMode( DcMotor.RunMode.RUN_TO_POSITION     );
-        lift           .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER     );
+        m_leftFrontDrive .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
+        m_leftRearDrive  .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
+        m_rightFrontDrive.setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
+        m_rightRearDrive .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
+        m_intake         .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
+
+        m_fold           .setMode( DcMotor.RunMode.RUN_TO_POSITION     );
+        m_lift           .setMode( DcMotor.RunMode.RUN_USING_ENCODER   );
 
         // ------------------------------------------------------------------
         // Define and initialize ALL installed servos.
         // ------------------------------------------------------------------
 
-        dump  = m_hwMap.get( Servo.class, DUMP_SERVO  );
-        latch = m_hwMap.get( Servo.class, LATCH_SERVO );
+        m_dump  = m_hwMap.get( Servo.class, DUMP_SERVO  );
+        m_claw  = m_hwMap.get( Servo.class, CLAW_SERVO  );
 
-        dump.setPosition ( 0.5 );
-        latch.setPosition( 0.5 );
+        m_dump.setPosition( 0.5 );
+
+        m_nLiftEncHomePos =  m_lift.getCurrentPosition();
+
+        CloseClaw();
     }
+
+    public boolean  GetLimitTop   () { return m_limitTop   .getVoltage() < 0.5; } //.getState(); }
+    public boolean  GetLimitBottom() { return m_limitBottom.getVoltage() < 0.5; } //getState(); }
+
+    public double  GetLimitTopVal   () { return m_limitTop   .getVoltage(); } //.getState(); }
+    public double  GetLimitBottomVal() { return m_limitBottom.getVoltage(); } //getState(); }
 
     // //////////////////////////////////////////////////////////////////////
     // //////////////////////////////////////////////////////////////////////
@@ -168,16 +222,45 @@ public class Robot
     // //////////////////////////////////////////////////////////////////////
 
     // //////////////////////////////////////////////////////////////////////
+    // Open & Close Claw Functions
+    // //////////////////////////////////////////////////////////////////////
+
+    public void OpenClaw()
+    {
+        m_claw.setPosition( 0 );
+        m_clawState = ClawStateEnum.Open;
+    }
+
+    // //////////////////////////////////////////////////////////////////////
+    //
+    // //////////////////////////////////////////////////////////////////////
+
+    public void CloseClaw()
+    {
+        m_claw.setPosition( 1 );
+        m_clawState = ClawStateEnum.Closed;
+    }
+
+    // //////////////////////////////////////////////////////////////////////
+    //
+    // //////////////////////////////////////////////////////////////////////
+
+    public boolean IsClawOpen()
+    {
+        return ( m_clawState == ClawStateEnum.Open);
+    }
+
+    // //////////////////////////////////////////////////////////////////////
     // Set manual left and right drive motor power (Tank Drive)
     // //////////////////////////////////////////////////////////////////////
 
     public void SetDrivePower( double dLeftPower, double dRightPower )
     {
-        leftFrontDrive .setPower( dLeftPower );
-        leftRearDrive  .setPower( dLeftPower );
+        m_leftFrontDrive .setPower( dLeftPower );
+        m_leftRearDrive  .setPower( dLeftPower );
 
-        rightFrontDrive.setPower( dRightPower );
-        rightRearDrive .setPower( dRightPower );
+        m_rightFrontDrive.setPower( dRightPower );
+        m_rightRearDrive .setPower( dRightPower );
     }
 
     // //////////////////////////////////////////////////////////////////////
@@ -227,10 +310,105 @@ public class Robot
 
     public void SetLiftMotorPower(double dPower )
     {
-        lift.setPower(dPower);
+        m_lift.setPower(dPower);
 
     }
 
+    // //////////////////////////////////////////////////////////////////////
+    //
+    // //////////////////////////////////////////////////////////////////////
 
- }
+   // public void SetLiftTarget( LiftPosEnum eTarget )
+   // {
+   //     targetPos = eTarget;
+   // }
+
+    public void SetLiftTarget( LiftPosEnum eTarget ) {
+
+        if ( m_targetPos != LiftPosEnum.None )
+            StopLift();
+
+        int nTarget = 0;
+        m_targetPos = eTarget;
+
+        switch (m_targetPos)
+        {
+            case Top:       nTarget = m_nLiftEncHomePos + LIFT_TOP;     break;
+            case Hook:      nTarget = m_nLiftEncHomePos + LIFT_LATCH;   break;
+            case Bottom:    nTarget = m_nLiftEncHomePos;                break;
+
+            case None:
+            default:
+                return;
+        }
+
+        m_lift.setTargetPosition( nTarget);
+
+        // Turn On RUN_TO_POSITION
+        m_lift.setMode( DcMotor.RunMode.RUN_TO_POSITION );
+
+        m_lift.setPower( 1 );
+    }
+
+    public void StopLift()
+    {
+        m_lift.setPower( 0 );
+        m_lift.setMode( DcMotor.RunMode.RUN_USING_ENCODER );
+
+        m_targetPos = LiftPosEnum.None;
+    }
+
+    public int LiftPos()
+    {
+        return  m_lift.getCurrentPosition();
+    }
+
+    public void LiftPeriodicCheck( double dUserLiftPower )
+    {
+        double  dLiftPower   = m_lift.getPower();
+        boolean bLimitTop    = GetLimitTop();
+        boolean bLimitBottom = GetLimitBottom();
+
+        // Is lift targeting a position?  If so, check to see if it reached the position.
+
+        if ( m_targetPos != LiftPosEnum.None )
+        {
+            if (m_lift.isBusy() == false)
+                StopLift();
+        }
+
+        // Is the user trying to manually move the stick, 0 power is okay if not targeting pos
+
+        if ((dUserLiftPower != 0) || (m_targetPos == LiftPosEnum.None ))
+        {
+            // if Manual input, stop targeting
+
+            if (m_targetPos != LiftPosEnum.None)
+                StopLift();
+
+            dLiftPower = dUserLiftPower;
+        }
+
+        // Check limit switches
+
+        // We don't know the direction of the motor when targeting, don't check limit switch for now
+
+        if (m_targetPos == LiftPosEnum.None )
+        {
+            if ((bLimitTop == false) && (dLiftPower > 0)) {
+                StopLift();
+                return;
+            }
+        }
+
+        if ((bLimitBottom == false) && (dLiftPower < 0))
+        {
+            StopLift();
+            return;
+        }
+
+        m_lift.setPower( dLiftPower );
+
+    }
+}
 
