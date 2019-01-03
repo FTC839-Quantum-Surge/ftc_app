@@ -52,7 +52,7 @@ import com.qualcomm.robotcore.util.Range;
  */
 
 @Autonomous(name="Richard_OpMode", group="Linear Opmode")
-//@Disabled
+@Disabled
 public class Richard_OpMode extends LinearOpMode {
 
     // Declare OpMode members.

@@ -29,8 +29,11 @@
 
 package org.firstinspires.ftc.teamcode.RoverRuckus;
 
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -61,6 +64,20 @@ public class Robot
         Bottom
     }
 
+    public enum ArmPosEnum
+    {
+        None,
+        Top,
+        Bottom
+    }
+
+    public enum FoldPosEnum
+    {
+        None,
+        Top,
+        Bottom
+    }
+
     // ----------------------------------------------------------------------
     // Private Constants
     // ----------------------------------------------------------------------
@@ -73,22 +90,40 @@ public class Robot
     private static final String INTAKE_MOTOR                = "intake";
     private static final String FOLD_MOTOR                  = "fold";
     private static final String LIFT_MOTOR                  = "lift";
+    private static final String ARM_MOTOR                   = "arm";
 
     private static final String DUMP_SERVO                  = "dump";
     private static final String CLAW_SERVO                  = "claw";
+    private static final String PADDLE_SERVO                = "paddle";
+
 
     private static final String LIMIT_TOP                   = "limitTop";
     private static final String LIMIT_BOTTOM                = "limitBottom";
 
     private static final int   LIFT_TOP                     = 22200;
-    private static final int   LIFT_LATCH                   = 9250;
+    private static final int   LIFT_LATCH                   =10000;
+
+    private static final int   ARM_TOP                      = 22200;
+    private static final int   ARM_BOTTOM                   =1000;
+
+    private static final int   FOLD_TOP                     = 22200;
+    private static final int   FOLD_BOTTOM                  =1000;
+
+    static final double     COUNTS_PER_MOTOR_REV    = 1440 ;    // eg: TETRIX Motor Encoder
+    static final double     DRIVE_GEAR_REDUCTION    = 1.0 ;     // This is < 1.0 if geared UP
+    static final double     WHEEL_DIAMETER_INCHES   = 4.0 ;     // For figuring circumference
+    static final double     COUNTS_PER_INCH         = -(COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) / (WHEEL_DIAMETER_INCHES * 3.1415);
+
 
     // ----------------------------------------------------------------------
     // Public Member Variables
     // ----------------------------------------------------------------------
 
-    private HardwareMap m_hwMap     = null;
-    private ElapsedTime m_period    = new ElapsedTime();
+    private OpMode       m_opMode    = null;
+    private HardwareMap  m_hwMap     = null;
+    private ElapsedTime  m_period    = new ElapsedTime();
+    private ElapsedTime  m_runtime   = new ElapsedTime();
+
 
     private DcMotor  m_leftFrontDrive      = null;
     private DcMotor  m_leftRearDrive       = null;
@@ -97,9 +132,15 @@ public class Robot
     private DcMotor  m_intake              = null;
     private DcMotor  m_fold                = null;
     private DcMotor  m_lift                = null;
+    private DcMotor  m_arm                 = null;
+
+
 
     private Servo    m_dump                = null;
     private Servo    m_claw                = null;
+    private Servo    m_paddle              = null;
+
+
 
     // Using Analog inputs for Limit Switches due to
     // issue with hub not powering on when digital input held low
@@ -108,16 +149,22 @@ public class Robot
     private AnalogInput m_limitBottom      = null;
 
     private int      m_nLiftEncHomePos     = 0;
+    private int      m_nArmEncHomePos      = 0;
 
     private ClawStateEnum   m_clawState    = ClawStateEnum.Unknown;
     private LiftPosEnum     m_targetPos    = LiftPosEnum.None;
+    private ArmPosEnum      m_targetArmPos = ArmPosEnum.None;
+    private FoldPosEnum     m_targetFoldPos= FoldPosEnum.None;
+
+
 
     // //////////////////////////////////////////////////////////////////////
     // Constructor
     // //////////////////////////////////////////////////////////////////////
 
-    public Robot()
+    public Robot( OpMode opMode )
     {
+        m_opMode = opMode;
     }
 
     // //////////////////////////////////////////////////////////////////////
@@ -143,6 +190,8 @@ public class Robot
         m_intake          = m_hwMap.get( DcMotor.class, INTAKE_MOTOR              );
         m_fold            = m_hwMap.get( DcMotor.class, FOLD_MOTOR                );
         m_lift            = m_hwMap.get( DcMotor.class, LIFT_MOTOR                );
+        m_arm             = m_hwMap.get( DcMotor.class, ARM_MOTOR                 );
+
 
         m_limitTop        = m_hwMap.get( AnalogInput.class, LIMIT_TOP          );
         m_limitBottom     = m_hwMap.get( AnalogInput.class, LIMIT_BOTTOM       );
@@ -165,7 +214,7 @@ public class Robot
         m_rightRearDrive  .setDirection( DcMotor.Direction.REVERSE );
 
         m_lift            .setDirection( DcMotor.Direction.REVERSE );
-
+        m_arm             .setDirection( DcMotor.Direction.REVERSE );
         // ------------------------------------------------------------------
         // Set all motors to zero power
         // ------------------------------------------------------------------
@@ -177,6 +226,10 @@ public class Robot
         m_intake         .setPower( 0 );
         m_fold           .setPower( 0 );
         m_lift           .setPower( 0 );
+        m_arm            .setPower( 0 );
+
+
+
 
         // ------------------------------------------------------------------
         // Set all motors run Mode
@@ -192,17 +245,22 @@ public class Robot
 
         m_fold           .setMode( DcMotor.RunMode.RUN_TO_POSITION     );
         m_lift           .setMode( DcMotor.RunMode.RUN_USING_ENCODER   );
+        m_arm            .setMode( DcMotor.RunMode.RUN_USING_ENCODER   );
 
         // ------------------------------------------------------------------
         // Define and initialize ALL installed servos.
         // ------------------------------------------------------------------
 
-        m_dump  = m_hwMap.get( Servo.class, DUMP_SERVO  );
-        m_claw  = m_hwMap.get( Servo.class, CLAW_SERVO  );
+        m_dump   = m_hwMap.get( Servo.class, DUMP_SERVO  );
+        m_claw   = m_hwMap.get( Servo.class, CLAW_SERVO  );
+        m_paddle = m_hwMap.get( Servo.class, PADDLE_SERVO  );
 
-        m_dump.setPosition( 0.5 );
+        m_dump.setPosition( 0 );
+        m_paddle.setPosition( 0.25 );
 
         m_nLiftEncHomePos =  m_lift.getCurrentPosition();
+        m_nArmEncHomePos  =  m_arm.getCurrentPosition();
+        m_nFoldEncHomePos =  m_fold.getCurrentPosition();
 
         CloseClaw();
     }
@@ -267,16 +325,68 @@ public class Robot
     // TODO: Use encoders to drive a specific distance.
     // //////////////////////////////////////////////////////////////////////
 
-    public void DriveDistance( double dLeftPower, double dRightPower, int nInches )
+    public void DriveDistance( double speed, double leftInches, double rightInches, double timeoutS)
     {
-        // NOTES: Since each side can be different power levels (slight turn)
-        //        which encoder should be used to determine distance (slower or faster motor)?
-        //        If turn is not needed, remove one of the power parameters.
+        int newLeftTarget;
+        int newRightTarget;
 
-        // 1) Read current encoder values
-        // 2) SetDrivePower( dLeftPower, dRightPower );
-        // 3) Wait until encoder meets or exceeds requested value
-        // 4) SetDrivePower( 0, 0 );    // Stop Motors
+        // Ensure that the opmode is still active
+
+        LinearOpMode opMode = (LinearOpMode)m_opMode;
+
+        if (opMode == null) {
+            return;
+        }
+
+        if ( opMode.opModeIsActive()) {
+
+            // Determine new target position, and pass to motor controller
+
+            newLeftTarget  = m_leftRearDrive .getCurrentPosition() + (int)(leftInches  * COUNTS_PER_INCH);
+            newRightTarget = m_rightRearDrive.getCurrentPosition() + (int)(rightInches * COUNTS_PER_INCH);
+
+            m_leftRearDrive .setTargetPosition(newLeftTarget);
+            m_rightRearDrive.setTargetPosition(newRightTarget);
+
+            // Turn On RUN_TO_POSITION
+            m_leftRearDrive .setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            m_rightRearDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+            // reset the timeout time and start motion.
+            m_runtime.reset();
+
+            SetDrivePower( Math.abs(speed), Math.abs(speed));
+
+            // keep looping while we are still active, and there is time left, and both motors are running.
+            // Note: We use (isBusy() && isBusy()) in the loop test, which means that when EITHER motor hits
+            // its target position, the motion will stop.  This is "safer" in the event that the robot will
+            // always end the motion as soon as possible.
+            // However, if you require that BOTH motors have finished their moves before the robot continues
+            // onto the next step, use (isBusy() || isBusy()) in the loop test.
+            while (opMode.opModeIsActive() &&
+                    (m_runtime.seconds() < timeoutS) &&
+                    (m_leftRearDrive.isBusy() && m_rightRearDrive.isBusy())) {
+
+                // Display it for the driver.
+
+                m_opMode.telemetry.addData("Path1",  "Running to %7d :%7d", newLeftTarget,  newRightTarget);
+                m_opMode.telemetry.addData("Path2",  "Running at %7d :%7d",
+                        m_leftRearDrive.getCurrentPosition(),
+                        m_rightRearDrive.getCurrentPosition());
+                m_opMode.telemetry.update();
+
+                LiftPeriodicCheck( 0 );
+            }
+
+            // Stop all motion;
+            SetDrivePower( 0, 0);
+
+            // Turn off RUN_TO_POSITION
+            m_leftRearDrive .setMode( DcMotor.RunMode.RUN_USING_ENCODER );
+            m_rightRearDrive.setMode( DcMotor.RunMode.RUN_USING_ENCODER );
+
+            //  sleep(250);   // optional pause after each move
+        }
     }
 
     // //////////////////////////////////////////////////////////////////////
@@ -313,6 +423,17 @@ public class Robot
         m_lift.setPower(dPower);
 
     }
+    public void SetArmMotorPower(double dPower )
+    {
+        m_arm.setPower(dPower);
+    }
+
+    public void SetFoldMotorPower(double dPower )
+    {
+        m_fold.setPower(dPower);
+    }
+
+
 
     // //////////////////////////////////////////////////////////////////////
     //
@@ -350,6 +471,62 @@ public class Robot
         m_lift.setPower( 1 );
     }
 
+
+    public void SetArmTarget( ArmPosEnum eTarget ) {
+
+        if ( m_targetArmPos != ArmPosEnum.None )
+            StopArm();
+
+        int nTarget = 0;
+        m_targetArmPos = eTarget;
+
+        switch (m_targetArmPos)
+        {
+            case Top:       nTarget = m_nArmEncHomePos + ARM_TOP;     break;
+            case Bottom:    nTarget = m_nArmEncHomePos;                break;
+
+            case None:
+            default:
+                return;
+        }
+
+        m_arm.setTargetPosition( nTarget);
+
+        // Turn On RUN_TO_POSITION
+        m_arm.setMode( DcMotor.RunMode.RUN_TO_POSITION );
+
+        m_arm.setPower( 1 );
+    }
+
+
+    public void SetFoldTarget( FoldPosEnum eTarget ) {
+
+        if ( m_targetFoldPos != FoldPosEnum.None )
+            StopFold();
+
+        int nTarget = 0;
+        m_targetFoldPos = eTarget;
+
+        switch (m_targetFoldPos)
+        {
+            case Top:       nTarget = m_nFoldEncHomePos + FOLD_TOP;     break;
+            case Bottom:    nTarget = m_FoldEncHomePos;                break;
+
+            case None:
+            default:
+                return;
+        }
+
+        m_fold.setTargetPosition( nTarget);
+
+        // Turn On RUN_TO_POSITION
+        m_fold.setMode( DcMotor.RunMode.RUN_TO_POSITION );
+
+        m_fold.setPower( 1 );
+    }
+
+
+
     public void StopLift()
     {
         m_lift.setPower( 0 );
@@ -358,23 +535,53 @@ public class Robot
         m_targetPos = LiftPosEnum.None;
     }
 
+    public void StopArm()
+    {
+        m_arm.setPower( 0 );
+        m_arm.setMode( DcMotor.RunMode.RUN_USING_ENCODER );
+
+        m_targetArmPos = ArmPosEnum.None;
+    }
+
+    public void StopFold()
+    {
+        m_fold.setPower( 0 );
+        m_fold.setMode( DcMotor.RunMode.RUN_USING_ENCODER );
+
+        m_targetFoldPos = FoldPosEnum.None;
+    }
+
     public int LiftPos()
     {
         return  m_lift.getCurrentPosition();
     }
 
-    public void LiftPeriodicCheck( double dUserLiftPower )
+    public int ArmPos()
+    {
+        return  m_arm.getCurrentPosition();
+    }
+
+    public int FoldPos()
+    {
+        return  m_fold.getCurrentPosition();
+    }
+
+
+    public boolean LiftPeriodicCheck( double dUserLiftPower )
     {
         double  dLiftPower   = m_lift.getPower();
         boolean bLimitTop    = GetLimitTop();
         boolean bLimitBottom = GetLimitBottom();
+        boolean bResult      = false;
 
         // Is lift targeting a position?  If so, check to see if it reached the position.
 
         if ( m_targetPos != LiftPosEnum.None )
         {
-            if (m_lift.isBusy() == false)
+            if (m_lift.isBusy() == false) {
                 StopLift();
+                bResult = true;
+            }
         }
 
         // Is the user trying to manually move the stick, 0 power is okay if not targeting pos
@@ -397,18 +604,86 @@ public class Robot
         {
             if ((bLimitTop == false) && (dLiftPower > 0)) {
                 StopLift();
-                return;
+                return true;
             }
         }
 
         if ((bLimitBottom == false) && (dLiftPower < 0))
         {
             StopLift();
-            return;
+            return true;
         }
 
         m_lift.setPower( dLiftPower );
 
+        return bResult;
     }
+
+
+    public boolean ArmPeriodicCheck( double dUserArmPower )
+    {
+        double  dArmPower   = m_arm.getPower();
+        boolean bResult      = false;
+
+        // Is arm targeting a position?  If so, check to see if it reached the position.
+
+        if ( m_targetArmPos != ArmPosEnum.None )
+        {
+            if (m_arm.isBusy() == false) {
+                StopArm();
+                bResult = true;
+            }
+        }
+
+        // Is the user trying to manually move the stick, 0 power is okay if not targeting pos
+
+        if ((dUserArmPower != 0) || (m_targetArmPos == ArmPosEnum.None ))
+        {
+            // if Manual input, stop targeting
+
+            if (m_targetArmPos != ArmPosEnum.None)
+                StopArm();
+
+            dArmPower = dUserArmPower;
+        }
+
+        m_arm.setPower( dArmPower );
+
+        return bResult;
+    }
+
+    public boolean FoldPeriodicCheck( double dUserFoldPower )
+    {
+        double  dFoldPower   = m_fold.getPower();
+        boolean bResult      = false;
+
+        // Is arm targeting a position?  If so, check to see if it reached the position.
+
+        if ( m_targetFoldPos != FoldPosEnum.None )
+        {
+            if (m_fold.isBusy() == false) {
+                StopFold();
+                bResult = true;
+            }
+        }
+
+        // Is the user trying to manually move the stick, 0 power is okay if not targeting pos
+
+        if ((dUserFoldPower != 0) || (m_targetFoldPos == FoldPosEnum.None ))
+        {
+            // if Manual input, stop targeting
+
+            if (m_targetFoldPos != FoldPosEnum.None)
+                StopFold();
+
+            dFoldPower = dUserFoldPower;
+        }
+
+        m_fold.setPower( dFoldPower );
+
+        return bResult;
+    }
+
+
 }
 

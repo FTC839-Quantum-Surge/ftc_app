@@ -56,9 +56,9 @@ import org.firstinspires.ftc.robotcontroller.external.samples.HardwarePushbot;
 public class Teleop extends OpMode{
 
     /* Declare OpMode members. */
-    Robot robot       = new Robot(); // use the class created to define a Pushbot's hardware
+    Robot robot       = new Robot( this ); // use the class created to define a Pushbot's hardware
     double          clawOffset  = 0.0 ;                  // Servo mid position
-    final double    CLAW_SPEED  = 0.02 ;                 // sets rate to move servo
+    final double    CLAW_SPEED  = 0.04 ;                 // sets rate to move servo
     private  boolean    bStartPressed = false;
 
     /*
@@ -95,14 +95,17 @@ public class Teleop extends OpMode{
     @Override
     public void loop() {
         double left;
-        double right;
+       double right;
 
         // Run wheels in tank mode (note: The joystick goes negative when pushed forwards, so negate it)
 
-        left = gamepad1.left_stick_y;
-        right = gamepad1.right_stick_y;
 
-        robot.SetDrivePower(left,right);
+        double drive = -gamepad1.right_stick_y;
+        double turn  =  gamepad1.right_stick_x;
+        left    = Range.clip(drive + turn, -1.0, 1.0) ;
+        right   = Range.clip(drive - turn, -1.0, 1.0) ;
+
+        robot.SetDrivePower( left, right);
 
         /*
         if (gamepad1.dpad_up)
@@ -154,6 +157,7 @@ public class Teleop extends OpMode{
         telemetry.addData("LimitBottom", b );
         telemetry.addData("LeftTrigger", gamepad1.left_trigger );
         telemetry.addData( "RightTrigger", gamepad1.right_trigger );
+
     }
 
     /*
