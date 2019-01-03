@@ -96,7 +96,7 @@ public class LowerDriveFwd extends LinearOpMode {
         // Lower down from hanging position
         // ------------------------------------------------------------------
 
-        robot.SetLiftTarget( Robot.LiftPosEnum.Hook );
+        robot.Lift.SetTarget( Lift.PosEnum.Hook, 1 );
 
         // ------------------------------------------------------------------
         // Wait for Lift to stop
@@ -105,7 +105,7 @@ public class LowerDriveFwd extends LinearOpMode {
         boolean bLiftComplete = false;
         while ( opModeIsActive()  && !bLiftComplete )
         {
-            bLiftComplete = robot.LiftPeriodicCheck( 0 );
+            bLiftComplete = robot.Lift.PeriodicCheck( 0 );
         }
 
         // ------------------------------------------------------------------
@@ -118,7 +118,7 @@ public class LowerDriveFwd extends LinearOpMode {
         // Lower Lift
         // ------------------------------------------------------------------
 
-        robot.SetLiftTarget( Robot.LiftPosEnum.Bottom );
+        robot.Lift.SetTarget( Lift.PosEnum.Bottom, 1 );
 
         // ------------------------------------------------------------------
         // Drive foward 6 inches
