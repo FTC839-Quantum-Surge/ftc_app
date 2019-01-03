@@ -32,6 +32,7 @@ package org.firstinspires.ftc.teamcode.RoverRuckus;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcontroller.external.samples.HardwarePushbot;
@@ -51,118 +52,159 @@ import org.firstinspires.ftc.robotcontroller.external.samples.HardwarePushbot;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="Teleop Tank", group="Quatom")
+@TeleOp(name="Teleop", group="Quantum")
 //@Disabled
-public class Teleop extends OpMode{
+public class Teleop extends OpMode {
 
     /* Declare OpMode members. */
-    Robot robot       = new Robot( this ); // use the class created to define a Pushbot's hardware
-    double          clawOffset  = 0.0 ;                  // Servo mid position
-    final double    CLAW_SPEED  = 0.04 ;                 // sets rate to move servo
-    private  boolean    bStartPressed = false;
+    private Robot    m_robot         = new Robot( this );
+    private boolean  m_bStartPressed = false;
 
-    /*
-     * Code to run ONCE when the driver hits INIT
-     */
+    // //////////////////////////////////////////////////////////////////////
+    // Code to run ONCE when the driver hits INIT
+    // //////////////////////////////////////////////////////////////////////
+
     @Override
-    public void init() {
-        /* Initialize the hardware variables.
-         * The init() method of the hardware class does all the work here
-         */
-        robot.init(hardwareMap);
+    public void init()
+    {
+        m_robot.init(hardwareMap);
 
         // Send telemetry message to signify robot waiting;
-        telemetry.addData("Say", "Hello Driver");    //
+        telemetry.addData("Say", "Hello Driver");
     }
 
-    /*
-     * Code to run REPEATEDLY after the driver hits INIT, but before they hit PLAY
-     */
+    // //////////////////////////////////////////////////////////////////////
+    // Code to run REPEATEDLY after the driver hits INIT, but before they hit PLAY
+    // //////////////////////////////////////////////////////////////////////
+
     @Override
-    public void init_loop() {
+    public void init_loop()
+    {
     }
 
-    /*
-     * Code to run ONCE when the driver hits PLAY
-     */
+    // //////////////////////////////////////////////////////////////////////
+    // Code to run ONCE when the driver hits PLAY
+    // //////////////////////////////////////////////////////////////////////
+
     @Override
-    public void start() {
+    public void start()
+    {
     }
 
-    /*
-     * Code to run REPEATEDLY after the driver hits PLAY but before they hit STOP
-     */
+    // //////////////////////////////////////////////////////////////////////
+    // Code to run REPEATEDLY after the driver hits PLAY but before they hit STOP
+    // //////////////////////////////////////////////////////////////////////
+
     @Override
-    public void loop() {
-        double left;
+    public void loop()
+    {
+       double left;
        double right;
 
-        // Run wheels in tank mode (note: The joystick goes negative when pushed forwards, so negate it)
-
+        // ------------------------------------------------------------------
+        // Drive Wheels - Run in Arcade mode
+        // (note: The joystick goes negative when pushed forwards, so negate it)
+        // ------------------------------------------------------------------
 
         double drive = -gamepad1.right_stick_y;
         double turn  =  gamepad1.right_stick_x;
         left    = Range.clip(drive + turn, -1.0, 1.0) ;
         right   = Range.clip(drive - turn, -1.0, 1.0) ;
 
-        robot.SetDrivePower( left, right);
+        m_robot.SetDrivePower( left, right);
 
-        /*
-        if (gamepad1.dpad_up)
+        // ------------------------------------------------------------------
+        // Claw
+        // ------------------------------------------------------------------
+
+        if (gamepad1.start)
+            m_bStartPressed = true;
+
+        if (!gamepad1.start && m_bStartPressed)
         {
-            robot.SetLiftMotorPower( 1 );
-        }
-        else if (gamepad1.dpad_down)
-        {
-                robot.SetLiftMotorPower(-1);
-        } else {
-                robot.SetLiftMotorPower(0);
-        }
-        */
+            m_bStartPressed = false;
 
-        if (gamepad1.start == true)
-            bStartPressed = true;
-
-
-        if ((gamepad1.start == false) && (bStartPressed == true))
-        {
-            bStartPressed = false;
-
-            if (robot.IsClawOpen())
-                robot.CloseClaw();
+            if (m_robot.IsClawOpen())
+                m_robot.CloseClaw();
             else
-                robot.OpenClaw();
+                m_robot.OpenClaw();
         }
+
+        // ------------------------------------------------------------------
+        // Lift
+        // ------------------------------------------------------------------
 
         if (gamepad1.y)
-            robot.SetLiftTarget( Robot.LiftPosEnum.Top );
+            m_robot.Lift.SetTarget( Lift.PosEnum.Top, 1 );
 
         if (gamepad1.a)
-            robot.SetLiftTarget( Robot.LiftPosEnum.Bottom );
+            m_robot.Lift.SetTarget( Lift.PosEnum.Bottom, 1 );
 
         if (gamepad1.b)
-            robot.SetLiftTarget( Robot.LiftPosEnum.Hook );
+            m_robot.Lift.SetTarget( Lift.PosEnum.Hook, 1 );
 
+        m_robot.Lift.PeriodicCheck( gamepad1.right_trigger - gamepad1.left_trigger);
 
-        robot.LiftPeriodicCheck( gamepad1.right_trigger - gamepad1.left_trigger);
+        // ------------------------------------------------------------------
+        // Arm
+        // ------------------------------------------------------------------
 
+        // TODO:
+
+        // Test Only
+//        if (gamepad1.dpad_up)
+//            m_robot.Arm.SetTarget( Arm.PosEnum.Top, 0.3, true );
+//        else if (gamepad1.dpad_down)
+//            m_robot.Arm.SetTarget( Arm.PosEnum.Bottom, 0.3, false );
+//        else
+//            m_robot.Arm.Stop();
+
+        m_robot.Arm.PeriodicCheck( gamepad1.left_stick_y );
+
+        double dSorterPos = Math.max( 1-(1/(Arm.ARM_TOP-Arm.ARM_BOTTOM)) * (double)m_robot.Arm.CurrentPos(), 0);
+
+        m_robot.m_dump.setPosition( dSorterPos );
+
+        // ------------------------------------------------------------------
+        // Fold
+        // ------------------------------------------------------------------
+
+        // TODO:
+
+        // Test Only
+//        if (gamepad1.dpad_right)
+//            m_robot.Fold.SetTarget( Fold.PosEnum.Floor, 0.1, false );
+//
+//        if (gamepad1.dpad_left)
+//            m_robot.Fold.SetTarget( Fold.PosEnum.Folded, 0.1, false );
+//
+//        if (gamepad1.back)
+//            m_robot.Fold.SetTarget( Fold.PosEnum.Vertical, 0.1, true );
+
+        m_robot.Fold.PeriodicCheck( 0 );
+
+        // ------------------------------------------------------------------
         // Send telemetry message to signify robot running;
-        // telemetry.addData("claw",  "Offset = %.2f", clawOffset);
+        // ------------------------------------------------------------------
 
-        double t = robot.GetLimitTopVal();
-        double b = robot.GetLimitBottomVal();
+        telemetry.addData("Sorter Pos",  "%f", dSorterPos);
+        telemetry.addData("Lift Pos",  "%d", m_robot.Lift.CurrentPos());
+        telemetry.addData("Arm  Pos",  "%d", m_robot.Arm.CurrentPos());
+        telemetry.addData("Fold Pos",  "%d", m_robot.Fold.CurrentPos());
+        telemetry.addData("L. W Pos",  "%d", m_robot.GetLeftDrivePos());
+        telemetry.addData("R. W Pos",  "%d", m_robot.GetRightDrivePos());
+//        telemetry.addData("intake Pos",  "%d", m_robot.m_intake.getCurrentPosition());
+        telemetry.addData( "left_y", "%f", gamepad1.left_stick_y );
 
-        telemetry.addData("Pos",  "%d", robot.LiftPos());
-        telemetry.addData("LimitTop", t);
-        telemetry.addData("LimitBottom", b );
         telemetry.addData("LeftTrigger", gamepad1.left_trigger );
         telemetry.addData( "RightTrigger", gamepad1.right_trigger );
 
     }
 
-    /*
-     * Code to run ONCE after the driver hits STOP
-     */
+    // //////////////////////////////////////////////////////////////////////
+    // Code to run ONCE after the driver hits STOP
+    // //////////////////////////////////////////////////////////////////////
+
     @Override
     public void stop() {
     }
