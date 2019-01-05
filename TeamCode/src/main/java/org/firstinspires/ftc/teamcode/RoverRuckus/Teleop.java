@@ -95,32 +95,92 @@ public class Teleop extends OpMode {
     // Code to run REPEATEDLY after the driver hits PLAY but before they hit STOP
     // //////////////////////////////////////////////////////////////////////
 
+    double dPos = 0;
+
     @Override
     public void loop()
     {
-       double left;
-       double right;
+        double left;
+        double right;
+
+        // //////////////////////////////////////////////////////////////////
+        // //////////////////////////////////////////////////////////////////
+        //
+        // Driver Controller Actions (gamepad1)
+        //
+        // //////////////////////////////////////////////////////////////////
+        // //////////////////////////////////////////////////////////////////
 
         // ------------------------------------------------------------------
         // Drive Wheels - Run in Arcade mode
         // (note: The joystick goes negative when pushed forwards, so negate it)
         // ------------------------------------------------------------------
 
-        double drive = -gamepad1.right_stick_y;
-        double turn  =  gamepad1.right_stick_x;
+        double drive = -gamepad1.left_stick_y;
+        double turn  = -gamepad1.left_stick_x;
         left    = Range.clip(drive + turn, -1.0, 1.0) ;
         right   = Range.clip(drive - turn, -1.0, 1.0) ;
 
+        // Adjust for dead zone...
+        if (Math.abs( left ) < .1)
+            left = 0;
+
+        if (Math.abs( right ) < .1)
+            left = 0;
+
+        // Override is pivot turn
+
+        if (gamepad1.right_bumper)
+        {
+            right = -1;
+            left  = 1;
+        }
+
+        if (gamepad1.left_bumper)
+        {
+            right = 1;
+            left  = -1;
+        }
+
         m_robot.SetDrivePower( left, right);
+
+        // ------------------------------------------------------------------
+        // Fold
+        // ------------------------------------------------------------------
+
+        if (gamepad1.y)
+            m_robot.Fold.SetTarget( Fold.PosEnum.Floor, 0.1, false );
+
+        if (gamepad1.a)
+            m_robot.Fold.SetTarget( Fold.PosEnum.Folded, 0.1, false );
+
+        if (gamepad1.b)
+            m_robot.Fold.SetTarget( Fold.PosEnum.Vertical, 0.1, true );
+
+        m_robot.Fold.PeriodicCheck( gamepad1.right_stick_y );
+
+        // ------------------------------------------------------------------
+        // intake
+        // ------------------------------------------------------------------
+
+        m_robot.SetIntakePower( gamepad1.right_trigger - gamepad1.left_trigger);
+
+        // //////////////////////////////////////////////////////////////////
+        // //////////////////////////////////////////////////////////////////
+        //
+        // Accessory Controller Actions  (gamepad2)
+        //
+        // //////////////////////////////////////////////////////////////////
+        // //////////////////////////////////////////////////////////////////
 
         // ------------------------------------------------------------------
         // Claw
         // ------------------------------------------------------------------
 
-        if (gamepad1.start)
+        if (gamepad2.start)
             m_bStartPressed = true;
 
-        if (!gamepad1.start && m_bStartPressed)
+        if (!gamepad2.start && m_bStartPressed)
         {
             m_bStartPressed = false;
 
@@ -134,70 +194,63 @@ public class Teleop extends OpMode {
         // Lift
         // ------------------------------------------------------------------
 
-        if (gamepad1.y)
+        if (gamepad2.y)
             m_robot.Lift.SetTarget( Lift.PosEnum.Top, 1 );
 
-        if (gamepad1.a)
+        if (gamepad2.a)
             m_robot.Lift.SetTarget( Lift.PosEnum.Bottom, 1 );
 
-        if (gamepad1.b)
+        if (gamepad2.b)
             m_robot.Lift.SetTarget( Lift.PosEnum.Hook, 1 );
 
-        m_robot.Lift.PeriodicCheck( gamepad1.right_trigger - gamepad1.left_trigger);
+
+        //dLiftPower = gamepad2.right_trigger - gamepad2.left_trigger;
+
+        double dPower = 0;
+
+        if (gamepad2.x)
+            dPower = -1;
+
+        m_robot.Lift.PeriodicCheck( dPower);
 
         // ------------------------------------------------------------------
         // Arm
         // ------------------------------------------------------------------
 
-        // TODO:
+//        if (gamepad2.dpad_up)
+//            m_robot.Arm.SetTarget( Arm.PosEnum.Top, 0.1, true );
+//
+//        if (gamepad2.dpad_down)
+//            m_robot.Arm.SetTarget( Arm.PosEnum.Bottom, 0.1, false );
 
-        // Test Only
-//        if (gamepad1.dpad_up)
-//            m_robot.Arm.SetTarget( Arm.PosEnum.Top, 0.3, true );
-//        else if (gamepad1.dpad_down)
-//            m_robot.Arm.SetTarget( Arm.PosEnum.Bottom, 0.3, false );
-//        else
-//            m_robot.Arm.Stop();
-
-        m_robot.Arm.PeriodicCheck( gamepad1.left_stick_y );
-
-        double dSorterPos = Math.max( 1-(1/(Arm.ARM_TOP-Arm.ARM_BOTTOM)) * (double)m_robot.Arm.CurrentPos(), 0);
-
-        m_robot.m_dump.setPosition( dSorterPos );
+        m_robot.Arm.PeriodicCheck( gamepad2.left_stick_y );
 
         // ------------------------------------------------------------------
-        // Fold
+        // Release / capture Elements in sorter
         // ------------------------------------------------------------------
 
-        // TODO:
+        if (gamepad2.right_bumper)
+            m_robot.ReleaseElements();
 
-        // Test Only
-//        if (gamepad1.dpad_right)
-//            m_robot.Fold.SetTarget( Fold.PosEnum.Floor, 0.1, false );
-//
-//        if (gamepad1.dpad_left)
-//            m_robot.Fold.SetTarget( Fold.PosEnum.Folded, 0.1, false );
-//
-//        if (gamepad1.back)
-//            m_robot.Fold.SetTarget( Fold.PosEnum.Vertical, 0.1, true );
+        if (gamepad2.left_bumper)
+            m_robot.CaptureElements();
 
-        m_robot.Fold.PeriodicCheck( 0 );
+        //m_robot.SetPaddlePos( dPos );
+
 
         // ------------------------------------------------------------------
         // Send telemetry message to signify robot running;
         // ------------------------------------------------------------------
 
-        telemetry.addData("Sorter Pos",  "%f", dSorterPos);
-        telemetry.addData("Lift Pos",  "%d", m_robot.Lift.CurrentPos());
-        telemetry.addData("Arm  Pos",  "%d", m_robot.Arm.CurrentPos());
-        telemetry.addData("Fold Pos",  "%d", m_robot.Fold.CurrentPos());
-        telemetry.addData("L. W Pos",  "%d", m_robot.GetLeftDrivePos());
-        telemetry.addData("R. W Pos",  "%d", m_robot.GetRightDrivePos());
-//        telemetry.addData("intake Pos",  "%d", m_robot.m_intake.getCurrentPosition());
-        telemetry.addData( "left_y", "%f", gamepad1.left_stick_y );
+        m_robot.AddTelemtry( telemetry );
+
+    //    telemetry.addData( "right1_y", "%f", gamepad1.right_stick_y );
+    //    telemetry.addData( "right2_y", "%f", gamepad2.right_stick_y );
 
         telemetry.addData("LeftTrigger", gamepad1.left_trigger );
         telemetry.addData( "RightTrigger", gamepad1.right_trigger );
+
+        telemetry.update();
 
     }
 
