@@ -30,12 +30,8 @@
 package org.firstinspires.ftc.teamcode.RoverRuckus;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
-
-import org.firstinspires.ftc.robotcontroller.external.samples.HardwarePushbot;
 
 /**
  * This file illustrates the concept of driving a path based on encoder counts.
@@ -64,9 +60,9 @@ import org.firstinspires.ftc.robotcontroller.external.samples.HardwarePushbot;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@Autonomous(name="LowerDriveFwd", group="FTC839")
+@Autonomous(name="lowertocrater", group="FTC839")
 //@Disabled
-public class LowerDriveFwd extends LinearOpMode {
+public class lowertocrater extends LinearOpMode {
 
     /* Declare OpMode members. */
     private Robot            robot   = new Robot( this );   // Use a Pushbot's hardware
@@ -136,17 +132,14 @@ public class LowerDriveFwd extends LinearOpMode {
 
         robot.Lift.SetTarget( Lift.PosEnum.Bottom, 1 );
 
-        // ------------------------------------------------------------------
-        // Set fold to floor
-        // ------------------------------------------------------------------
 
-        robot.Fold.SetTarget( Fold.PosEnum.Floor, 1 );
+
 
         // ------------------------------------------------------------------
-        // Drive foward 12 inches
+        // Drive forward 16 inches
         // ------------------------------------------------------------------
 
-        robot.DriveDistance( DRIVE_SPEED,  -12,  -12, 1.0 );
+        robot.DriveDistance( DRIVE_SPEED,  -16,  -16, 1.0 );
 
 
         // ------------------------------------------------------------------
@@ -156,19 +149,15 @@ public class LowerDriveFwd extends LinearOpMode {
         robot.SetDrivePower( 0, 0 );
 
 
-        sleep( 3000 );
+        sleep( 300 );
 
         // ------------------------------------------------------------------
-        // Drive backward 6 inches
+        // Drive forward 6 inches
         // ------------------------------------------------------------------
 
-        robot.DriveDistance( DRIVE_SPEED,  6,  6, 1.0 );
+        robot.DriveDistance( DRIVE_SPEED,  -6,  -6, 1.0 );
 
-        // ------------------------------------------------------------------
-        // Move fold to vertical
-        // ------------------------------------------------------------------
 
-        robot.Fold.SetTarget( Fold.PosEnum.Vertical, 1 );
 
         sleep( 3000 );
 

@@ -30,6 +30,21 @@ public class Arm extends Targetable< Arm.PosEnum >
     }
 
     // //////////////////////////////////////////////////////////////////////
+    // Override stop method and make it maintain current location if stopped.
+    // //////////////////////////////////////////////////////////////////////
+
+    @Override
+    public void Stop()
+    {
+        m_motor.setTargetPosition( m_motor.getCurrentPosition() );
+//        m_motor.setPower( 0 );
+//        m_motor.setMode( DcMotor.RunMode.RUN_USING_ENCODER );
+//
+//        m_eTargetPos = GetNotTargetingValue();
+    }
+
+
+    // //////////////////////////////////////////////////////////////////////
     //
     // //////////////////////////////////////////////////////////////////////
 
@@ -50,7 +65,7 @@ public class Arm extends Targetable< Arm.PosEnum >
 
         return 0;
     }
-/*
+
     @Override
     public boolean PeriodicCheck( double dOverridePower )
     {
@@ -58,11 +73,11 @@ public class Arm extends Targetable< Arm.PosEnum >
 
         // Rotate sorter based on arm position.
 
-        double dSorterPos = (1/(ARM_TOP-ARM_BOTTOM)) * CurrentPos();
+        double dSorterPos = Math.max( 1.0f-(1.0f/(Arm.ARM_TOP-Arm.ARM_BOTTOM)) * (double)CurrentPos(), 0.0f);
 
         m_sorter.setPosition( dSorterPos );
 
         return bResult;
     }
-*/
+
 }

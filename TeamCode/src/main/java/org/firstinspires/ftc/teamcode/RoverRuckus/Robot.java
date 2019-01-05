@@ -37,6 +37,8 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+
 /**
  * This is the Hardware Configuration class for the 2018-2019 Rover Ruckus design.
  *
@@ -46,6 +48,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  */
 public class Robot
 {
+
     public enum ClawStateEnum
     {
         Unknown,
@@ -70,6 +73,7 @@ public class Robot
     private static final String DUMP_SERVO                  = "dump";
     private static final String CLAW_SERVO                  = "claw";
     private static final String PADDLE_SERVO                = "paddle";
+    private static final String TILT_SERVO                  = "tilt";
 
     private static final String LIMIT_TOP                   = "limitTop";
     private static final String LIMIT_BOTTOM                = "limitBottom";
@@ -109,6 +113,7 @@ public class Robot
     public  Servo    m_dump                = null;
     private Servo    m_claw                = null;
     public  Servo    m_paddle              = null;
+    public  Servo    m_tilt                = null;
 
     // Using Analog inputs for Limit Switches due to
     // issue with hub not powering on when digital input held low
@@ -223,16 +228,34 @@ public class Robot
 
         m_dump   = m_hwMap.get( Servo.class, DUMP_SERVO  );
         m_claw   = m_hwMap.get( Servo.class, CLAW_SERVO  );
-        m_paddle = m_hwMap.get( Servo.class, PADDLE_SERVO  );
+        m_paddle = m_hwMap.get( Servo.class, PADDLE_SERVO);
+        m_tilt   = m_hwMap.get( Servo.class, TILT_SERVO  );
 
         m_dump  .setPosition( 1.0 );
-        m_paddle.setPosition( 0.75 );
+        m_tilt  .setPosition( 0 );
 
         Lift = new Lift( m_liftMotor, m_limitTop, m_limitBottom );
         Arm  = new Arm ( m_armMotor, m_dump );
         Fold = new Fold( m_foldMotor );
 
         CloseClaw();
+        CaptureElements();
+    }
+
+    // //////////////////////////////////////////////////////////////////////
+    //
+    // //////////////////////////////////////////////////////////////////////
+
+    public void AddTelemtry(Telemetry telemetry)
+    {
+        // telemetry.addData("Sorter Pos",  "%f", m_dump.getPosition());
+        telemetry.addData( "paddle Pos", "%f", m_paddle.getPosition());
+
+        telemetry.addData("Lift Pos",  "%d", Lift.CurrentPos());
+        telemetry.addData("Arm  Pos",  "%d", Arm.CurrentPos());
+        telemetry.addData("Fold Pos",  "%d", Fold.CurrentPos());
+        telemetry.addData("L. W Pos",  "%d", GetLeftDrivePos());
+        telemetry.addData("R. W Pos",  "%d", GetRightDrivePos());
     }
 
     // //////////////////////////////////////////////////////////////////////
@@ -245,6 +268,25 @@ public class Robot
 
     public int GetLeftDrivePos () { return m_leftRearDrive.getCurrentPosition(); }
     public int GetRightDrivePos() { return m_rightRearDrive.getCurrentPosition(); }
+
+    // //////////////////////////////////////////////////////////////////////
+    // Paddle
+    // //////////////////////////////////////////////////////////////////////
+
+    public void CaptureElements()
+    {
+        m_paddle.setPosition( 0.9 );
+    }
+
+    public void ReleaseElements()
+    {
+        m_paddle.setPosition( 0.5 );
+    }
+
+    public void SetPaddlePos(double dPos)
+    {
+        m_paddle.setPosition( dPos );
+    }
 
     // //////////////////////////////////////////////////////////////////////
     // Open & Close Claw Functions
@@ -273,6 +315,15 @@ public class Robot
     public boolean IsClawOpen()
     {
         return ( m_clawState == ClawStateEnum.Open);
+    }
+
+    // //////////////////////////////////////////////////////////////////////
+    //
+    // //////////////////////////////////////////////////////////////////////
+
+    public void SetIntakePower( double dPower )
+    {
+        m_intake.setPower( dPower );
     }
 
     // //////////////////////////////////////////////////////////////////////
