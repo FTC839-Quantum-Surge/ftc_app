@@ -59,13 +59,10 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * Use Android Studios to Copy this Class, and Paste it into your team's code folder with a new name.
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
-import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.util.ElapsedTime;
-@Autonomous(name="lowertocrater", group="FTC839")
-@Disabled
-public class lowertocrater extends LinearOpMode {
+
+@Autonomous(name="autonomous2", group="FTC839")
+//@Disabled
+public class autonomous2 extends LinearOpMode {
 
     /* Declare OpMode members. */
     private Robot            robot   = new Robot( this );   // Use a Pushbot's hardware
@@ -87,6 +84,12 @@ public class lowertocrater extends LinearOpMode {
          * The init() method of the hardware class does all the work here
          */
         robot.init(hardwareMap);
+
+
+
+        // vision.Initialize();
+
+
 
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
@@ -139,6 +142,7 @@ public class lowertocrater extends LinearOpMode {
             robot.Fold.PeriodicCheck(0);
         }
 
+        sleep(1000);
         // ------------------------------------------------------------------
         // Lower Lift
         // ------------------------------------------------------------------
@@ -146,7 +150,13 @@ public class lowertocrater extends LinearOpMode {
         robot.Lift.SetTarget( Lift.PosEnum.Bottom, 1 );
 
         // ------------------------------------------------------------------
-        // Drive forward 16 inches
+        // Identify gold element with telemetry
+        // ------------------------------------------------------------------
+
+
+
+        // ------------------------------------------------------------------
+        // Drive forward towards gold element
         // ------------------------------------------------------------------
 
         robot.DriveDistance( DRIVE_SPEED,  -30,  -30, 1.0 );

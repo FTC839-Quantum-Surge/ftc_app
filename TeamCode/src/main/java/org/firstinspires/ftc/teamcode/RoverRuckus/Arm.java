@@ -3,7 +3,7 @@ package org.firstinspires.ftc.teamcode.RoverRuckus;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 
-public class Arm extends Targetable< Arm.PosEnum >
+public class Arm extends ManualTargeting< Arm.PosEnum >
 {
     public static final int   ARM_TOP                      = 132;
     public static final int   ARM_BOTTOM                   = 0;
@@ -29,10 +29,24 @@ public class Arm extends Targetable< Arm.PosEnum >
         m_sorter = sorter;
     }
 
+    @Override public int    DeadZone() { return 5; }
+
+    @Override public double ScalePower( double dPower, int nAbsAmtToGo )
+    {
+        if (nAbsAmtToGo < 50)
+            return dPower * .50;
+
+        if (nAbsAmtToGo < 25)
+            return dPower * .25;
+
+        return dPower;
+    }
+
     // //////////////////////////////////////////////////////////////////////
     // Override stop method and make it maintain current location if stopped.
     // //////////////////////////////////////////////////////////////////////
 
+    /*
     @Override
     public void Stop()
     {
@@ -42,7 +56,7 @@ public class Arm extends Targetable< Arm.PosEnum >
 //
 //        m_eTargetPos = GetNotTargetingValue();
     }
-
+*/
 
     // //////////////////////////////////////////////////////////////////////
     //

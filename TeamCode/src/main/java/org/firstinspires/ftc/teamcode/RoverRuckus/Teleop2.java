@@ -29,13 +29,9 @@
 
 package org.firstinspires.ftc.teamcode.RoverRuckus;
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.Range;
-
-import org.firstinspires.ftc.robotcontroller.external.samples.HardwarePushbot;
 
 /**
  * This file provides basic Telop driving for a Pushbot robot.
@@ -52,9 +48,9 @@ import org.firstinspires.ftc.robotcontroller.external.samples.HardwarePushbot;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="Teleop", group="Quantum")
-@Disabled
-public class Teleop extends OpMode {
+@TeleOp(name="Teleop2", group="Quantum")
+//@Disabled
+public class Teleop2 extends OpMode {
 
     /* Declare OpMode members. */
     private Robot    m_robot         = new Robot( this );
@@ -144,26 +140,25 @@ public class Teleop extends OpMode {
 
         m_robot.SetDrivePower( left, right);
 
-        // ------------------------------------------------------------------
-        // Fold
-        // ------------------------------------------------------------------
 
-        if (gamepad1.y)
-            m_robot.Fold.SetTarget( Fold.PosEnum.Folded, 0.5, false );
-
-        if (gamepad1.a)
-            m_robot.Fold.SetTarget( Fold.PosEnum.Floor, 0.5, false );
-
-        if (gamepad1.b)
-            m_robot.Fold.SetTarget( Fold.PosEnum.Vertical, 0.5, true );
-
-        m_robot.Fold.PeriodicCheck(  -(gamepad1.right_stick_y * 0.20) );
 
         // ------------------------------------------------------------------
-        // intake
+        // Claw
         // ------------------------------------------------------------------
 
-        m_robot.SetIntakePower( gamepad1.right_trigger - gamepad1.left_trigger);
+        if (gamepad1.start)
+            m_bStartPressed = true;
+
+        if (!gamepad1.start && m_bStartPressed)
+        {
+            m_bStartPressed = false;
+
+            if (m_robot.IsClawOpen())
+                m_robot.CloseClaw();
+            else
+                m_robot.OpenClaw();
+        }
+
 
         // //////////////////////////////////////////////////////////////////
         // //////////////////////////////////////////////////////////////////
@@ -173,22 +168,29 @@ public class Teleop extends OpMode {
         // //////////////////////////////////////////////////////////////////
         // //////////////////////////////////////////////////////////////////
 
+
         // ------------------------------------------------------------------
-        // Claw
+        // Fold
         // ------------------------------------------------------------------
 
-        if (gamepad2.start)
-            m_bStartPressed = true;
+        if (gamepad2.dpad_up)
+            m_robot.Fold.SetTarget( Fold.PosEnum.Folded, 1, false );
 
-        if (!gamepad2.start && m_bStartPressed)
-        {
-            m_bStartPressed = false;
+        if (gamepad2.dpad_down)
+            m_robot.Fold.SetTarget( Fold.PosEnum.Floor, 1, false );
 
-            if (m_robot.IsClawOpen())
-                m_robot.CloseClaw();
-            else
-                m_robot.OpenClaw();
-        }
+        if (gamepad2.dpad_right)
+            m_robot.Fold.SetTarget( Fold.PosEnum.Vertical, 1, true );
+
+        m_robot.Fold.PeriodicCheck(  -(gamepad2.right_stick_y * 1) );
+
+        // ------------------------------------------------------------------
+        // intake
+        // ------------------------------------------------------------------
+
+        m_robot.SetIntakePower( gamepad2.right_trigger - gamepad2.left_trigger);
+
+
 
         // ------------------------------------------------------------------
         // Lift
@@ -204,7 +206,7 @@ public class Teleop extends OpMode {
             m_robot.Lift.SetTarget( Lift.PosEnum.Hook, 1 );
 
 
-        m_robot.Lift.PeriodicCheck( gamepad2.right_trigger - gamepad2.left_trigger );
+        m_robot.Lift.PeriodicCheck(  -(gamepad2.left_stick_y * 1 ) );
 
         // ------------------------------------------------------------------
         // Arm
@@ -216,17 +218,17 @@ public class Teleop extends OpMode {
        // if (gamepad2.dpad_down)
         // .Arm.SetTarget( Arm.PosEnum.Bottom, 0.15, false );
 
-        m_robot.Arm.PeriodicCheck( gamepad2.left_stick_y * 0.55    );
+       // m_robot.Arm.PeriodicCheck( gamepad2.left_stick_y * 0.55    );
 
         // ------------------------------------------------------------------
         // Release / capture Elements in sorter
         // ------------------------------------------------------------------
 
-        if (gamepad2.right_bumper)
-            m_robot.ReleaseElements();
+        // if (gamepad2.right_bumper)
+        //   m_robot.ReleaseElements();
 
-        if (gamepad2.left_bumper)
-            m_robot.CaptureElements();
+        //if (gamepad2.left_bumper)
+        //  m_robot.CaptureElements();
 
         // ------------------------------------------------------------------
         // Raise / lower Tilt
@@ -243,7 +245,7 @@ public class Teleop extends OpMode {
 
         m_robot.AddTelemtry( telemetry );
 
-    //    telemetry.addData( "right1_y", "%f", gamepad1.right_stick_y );
+        telemetry.addData( "right1_y", "%f", gamepad2.right_stick_y );
         telemetry.addData( "right2_y", "%f", gamepad2.left_stick_y );
 
     //    telemetry.addData("LeftTrigger", gamepad1.left_trigger );

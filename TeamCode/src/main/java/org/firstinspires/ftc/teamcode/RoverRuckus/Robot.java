@@ -222,6 +222,8 @@ public class Robot
         m_armMotor       .setMode( DcMotor.RunMode.RUN_USING_ENCODER   );
 
 
+        m_armMotor.setZeroPowerBehavior( DcMotor.ZeroPowerBehavior.BRAKE );
+
         // ------------------------------------------------------------------
         // Define and initialize ALL installed servos.
         // ------------------------------------------------------------------
@@ -251,11 +253,18 @@ public class Robot
         // telemetry.addData("Sorter Pos",  "%f", m_dump.getPosition());
         telemetry.addData( "paddle Pos", "%f", m_paddle.getPosition());
 
+        //telemetry.addData("Lift Pos",  "%d", Lift.CurrentPos());
         telemetry.addData("Lift Pos",  "%d", Lift.CurrentPos());
-        telemetry.addData("Arm  Pos",  "%d", Arm.CurrentPos());
         telemetry.addData("Fold Pos",  "%d", Fold.CurrentPos());
         telemetry.addData("L. W Pos",  "%d", GetLeftDrivePos());
         telemetry.addData("R. W Pos",  "%d", GetRightDrivePos());
+
+        telemetry.addData( "RR Pwrs", "%f", m_rightRearDrive.getPower());
+        telemetry.addData( "LR Pwrs", "%f", m_leftRearDrive.getPower());
+
+        telemetry.addData( "RF Pwrs", "%f", m_rightFrontDrive.getPower());
+        telemetry.addData( "LF Pwrs", "%f", m_leftFrontDrive.getPower());
+
     }
 
     // //////////////////////////////////////////////////////////////////////
@@ -314,8 +323,15 @@ public class Robot
 
     public boolean IsClawOpen()
     {
-        return ( m_clawState == ClawStateEnum.Open);
+        return (( m_clawState == ClawStateEnum.Open) && m_claw.getPosition() <= 2);
     }
+
+    // //////////////////////////////////////////////////////////////////////
+    //
+    // //////////////////////////////////////////////////////////////////////
+
+    public void TiltUp  () { m_tilt.setPosition( 1 ); }
+    public void TiltDown() { m_tilt.setPosition( 0 ); }
 
     // //////////////////////////////////////////////////////////////////////
     //

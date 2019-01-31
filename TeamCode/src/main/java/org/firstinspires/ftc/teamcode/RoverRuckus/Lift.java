@@ -5,8 +5,8 @@ import com.qualcomm.robotcore.hardware.AnalogInput;
 
 public class Lift  extends Targetable< Lift.PosEnum >
 {
-    private static final int   LIFT_TOP                     = 22200;
-    private static final int   LIFT_LATCH                   = 10000;
+    private static final int   LIFT_TOP                     = 19725;
+    private static final int   LIFT_LATCH                   = 11250; //11000=not working  //11500   //12000;    //10000;
 
     private AnalogInput m_limitTop;
     private AnalogInput m_limitBottom;
@@ -38,8 +38,8 @@ public class Lift  extends Targetable< Lift.PosEnum >
 
     @Override protected Lift.PosEnum GetNotTargetingValue() { return PosEnum.None; }
 
-    @Override public boolean  GetLimitTop   () { return m_limitTop   .getVoltage() < 0.5; }
-    @Override public boolean  GetLimitBottom() { return m_limitBottom.getVoltage() < 0.5; }
+    @Override public boolean  GetLimitTop   () { return m_limitTop   .getVoltage() > 0.5; }
+    @Override public boolean  GetLimitBottom() { return m_limitBottom.getVoltage() > 0.5; }
 
     public double  GetLimitTopVal   () { return m_limitTop   .getVoltage(); }
     public double  GetLimitBottomVal() { return m_limitBottom.getVoltage(); }

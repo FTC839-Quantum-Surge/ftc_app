@@ -65,7 +65,7 @@ import org.firstinspires.ftc.robotcontroller.external.samples.HardwarePushbot;
  */
 
 @Autonomous(name="LowerDriveFwd", group="FTC839")
-//@Disabled
+@Disabled
 public class LowerDriveFwd extends LinearOpMode {
 
     /* Declare OpMode members. */

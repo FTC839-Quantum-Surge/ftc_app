@@ -2,13 +2,16 @@ package org.firstinspires.ftc.teamcode.RoverRuckus;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 
-public abstract class Targetable< T >
+public abstract class ManualTargeting< T >
 {
     protected DcMotor m_motor;
     protected int     m_nHomeEncPos = 0;
 
     protected T       m_eTargetPos;
+    protected int     m_nTargetPosNumber;
+    protected double  m_dTargetPower = 0;
     protected boolean m_bHoldPosition = false;
+
 
     // //////////////////////////////////////////////////////////////////////
 
@@ -22,11 +25,14 @@ public abstract class Targetable< T >
     public boolean GetLimitTop   () { return false; }
     public boolean GetLimitBottom() { return false; }
 
+    public double ScalePower( double dPower, int nAbsAmtToGo ) { return dPower; }
+    public int    DeadZone  () {  return 10; }
+
     // //////////////////////////////////////////////////////////////////////
     //
     // //////////////////////////////////////////////////////////////////////
 
-    public Targetable( DcMotor motor )
+    public ManualTargeting(DcMotor motor )
     {
         m_motor             = motor;
         m_nHomeEncPos       = m_motor.getCurrentPosition();
@@ -54,12 +60,23 @@ public abstract class Targetable< T >
     //
     // //////////////////////////////////////////////////////////////////////
 
-    public void Stop()
+    public void Stop( boolean bHoldPosition )
     {
-        m_motor.setPower( 0 );
-        m_motor.setMode( DcMotor.RunMode.RUN_USING_ENCODER );
+        m_motor.setPower(0);
 
-        m_eTargetPos = GetNotTargetingValue();
+        if (!bHoldPosition)
+        {
+            m_motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+            m_eTargetPos = GetNotTargetingValue();
+
+            return;
+        }
+
+        // Set Motor to use position mode to help maintain location.
+
+
+
     }
 
     // //////////////////////////////////////////////////////////////////////
@@ -74,21 +91,22 @@ public abstract class Targetable< T >
     public void SetTarget( T eTarget, double dPower, boolean bHoldPosition )
     {
         m_bHoldPosition = bHoldPosition;
+        m_dTargetPower  = dPower;
 
         if ( m_eTargetPos != GetNotTargetingValue() )
-            Stop();
+            Stop( false );
 
         m_eTargetPos = eTarget;
-        int nTarget = m_nHomeEncPos + GetEncoderTargetValue( m_eTargetPos );
+        m_nTargetPosNumber = m_nHomeEncPos + GetEncoderTargetValue( m_eTargetPos );
 
-        m_motor.setTargetPosition( nTarget);
+//        m_motor.setTargetPosition( nTarget);
 
         // ------------------------------------------------------------------
         // Turn On RUN_TO_POSITION
         // ------------------------------------------------------------------
 
-        m_motor.setMode( DcMotor.RunMode.RUN_TO_POSITION );
-        SetPower(  dPower );
+//        m_motor.setMode( DcMotor.RunMode.RUN_TO_POSITION );
+//        SetPower(  dPower );
     }
 
     // //////////////////////////////////////////////////////////////////////
@@ -108,12 +126,32 @@ public abstract class Targetable< T >
 
         if ( m_eTargetPos != GetNotTargetingValue() )
         {
-            if ( m_motor.isBusy() == false)
-            {
-                if (!m_bHoldPosition)
-                    Stop();
+            // Check Pos to see if target archieved
 
+            int nAmtToGo = m_nTargetPosNumber - m_motor.getCurrentPosition();
+            int nAbsAmtToGo = Math.abs( nAmtToGo );
+
+            if ( nAbsAmtToGo > DeadZone() )
+            {
+
+                // Not there yet, keep moving
+
+                // If not, determine direction to move
+
+                double dDirection = (nAmtToGo < 0) ? -1.0 : 1.0;
+
+                // Calculate power required (slow down as we approach)
+
+                if (dPower == 0)
+                    dPower = m_dTargetPower;
+
+                dPower = ScalePower( Math.abs( dPower ), nAbsAmtToGo)  * dDirection;
+                // TODO:
+            }
+            else
+            {
                 bResult = true;
+                Stop( m_bHoldPosition );
             }
         }
 
@@ -128,7 +166,10 @@ public abstract class Targetable< T >
             // --------------------------------------------------------------
 
             if (m_eTargetPos != GetNotTargetingValue())
-                Stop();
+            {
+                bResult = true;
+                Stop( false );
+            }
 
             dPower = dOverridePower;
         }
@@ -146,14 +187,14 @@ public abstract class Targetable< T >
         {
             if ((bLimitTop == true) && (dPower > 0))
             {
-                Stop();
+                Stop( false );
                 return true;
             }
         }
 
         if ((bLimitBottom == true) && (dPower < 0))
         {
-            Stop();
+            Stop( false );
             return true;
         }
 

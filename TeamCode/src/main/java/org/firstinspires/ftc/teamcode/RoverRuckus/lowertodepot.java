@@ -30,6 +30,7 @@
 package org.firstinspires.ftc.teamcode.RoverRuckus;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -61,7 +62,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  */
 
 @Autonomous(name="lowertodepot", group="FTC839")
-//@Disabled
+@Disabled
 public class lowertodepot extends LinearOpMode {
 
     /* Declare OpMode members. */

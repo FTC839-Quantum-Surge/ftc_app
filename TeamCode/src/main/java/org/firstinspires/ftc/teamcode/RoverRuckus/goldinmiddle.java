@@ -59,13 +59,10 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * Use Android Studios to Copy this Class, and Paste it into your team's code folder with a new name.
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
-import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.util.ElapsedTime;
-@Autonomous(name="lowertocrater", group="FTC839")
-@Disabled
-public class lowertocrater extends LinearOpMode {
+
+@Autonomous(name="goldinmiddle", group="FTC839")
+//@Disabled
+public class goldinmiddle extends LinearOpMode {
 
     /* Declare OpMode members. */
     private Robot            robot   = new Robot( this );   // Use a Pushbot's hardware
@@ -139,6 +136,7 @@ public class lowertocrater extends LinearOpMode {
             robot.Fold.PeriodicCheck(0);
         }
 
+        sleep(1000);
         // ------------------------------------------------------------------
         // Lower Lift
         // ------------------------------------------------------------------
