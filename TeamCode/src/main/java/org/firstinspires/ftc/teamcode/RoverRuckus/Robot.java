@@ -68,12 +68,13 @@ public class Robot
     private static final String INTAKE_MOTOR                = "intake";
     private static final String FOLD_MOTOR                  = "fold";
     private static final String LIFT_MOTOR                  = "lift";
-    private static final String ARM_MOTOR                   = "arm";
+//    private static final String ARM_MOTOR                   = "arm";
 
-    private static final String DUMP_SERVO                  = "dump";
+    private static final String DUMP_SERVO_1                = "dump1";
+    private static final String DUMP_SERVO_2                = "dump2";
     private static final String CLAW_SERVO                  = "claw";
-    private static final String PADDLE_SERVO                = "paddle";
-    private static final String TILT_SERVO                  = "tilt";
+//    private static final String PADDLE_SERVO                = "paddle";
+//    private static final String TILT_SERVO                  = "tilt";
 
     private static final String LIMIT_TOP                   = "limitTop";
     private static final String LIMIT_BOTTOM                = "limitBottom";
@@ -105,15 +106,16 @@ public class Robot
     private DcMotor  m_leftRearDrive       = null;
     private DcMotor  m_rightFrontDrive     = null;
     private DcMotor  m_rightRearDrive      = null;
-    public DcMotor  m_intake              = null;
+    public  DcMotor  m_intake              = null;
     private DcMotor  m_foldMotor           = null;
     private DcMotor  m_liftMotor           = null;
-    private DcMotor  m_armMotor            = null;
+//    private DcMotor  m_armMotor            = null;
 
-    public  Servo    m_dump                = null;
+    public  Servo    m_dump1               = null;
+    public  Servo    m_dump2               = null;
     private Servo    m_claw                = null;
-    public  Servo    m_paddle              = null;
-    public  Servo    m_tilt                = null;
+//    public  Servo    m_paddle              = null;
+//    public  Servo    m_tilt                = null;
 
     // Using Analog inputs for Limit Switches due to
     // issue with hub not powering on when digital input held low
@@ -128,7 +130,7 @@ public class Robot
     // //////////////////////////////////////////////////////////////////////
 
     public Lift    Lift = null;
-    public Arm     Arm  = null;
+//    public Arm     Arm  = null;
     public Fold    Fold = null;
 
     // //////////////////////////////////////////////////////////////////////
@@ -163,7 +165,7 @@ public class Robot
         m_intake          = m_hwMap.get( DcMotor.class, INTAKE_MOTOR              );
         m_foldMotor       = m_hwMap.get( DcMotor.class, FOLD_MOTOR                );
         m_liftMotor       = m_hwMap.get( DcMotor.class, LIFT_MOTOR                );
-        m_armMotor        = m_hwMap.get( DcMotor.class, ARM_MOTOR                 );
+//        m_armMotor        = m_hwMap.get( DcMotor.class, ARM_MOTOR                 );
 
         m_limitTop        = m_hwMap.get( AnalogInput.class, LIMIT_TOP          );
         m_limitBottom     = m_hwMap.get( AnalogInput.class, LIMIT_BOTTOM       );
@@ -186,7 +188,7 @@ public class Robot
         m_rightRearDrive  .setDirection( DcMotor.Direction.REVERSE );
 
         m_liftMotor       .setDirection( DcMotor.Direction.REVERSE );
-        m_armMotor        .setDirection( DcMotor.Direction.REVERSE );
+//        m_armMotor        .setDirection( DcMotor.Direction.REVERSE );
 
         // ------------------------------------------------------------------
         // Set all motors to zero power
@@ -199,7 +201,7 @@ public class Robot
         m_intake         .setPower( 0 );
         m_foldMotor      .setPower( 0 );
         m_liftMotor      .setPower( 0 );
-        m_armMotor       .setPower( 0 );
+//        m_armMotor       .setPower( 0 );
 
         // ------------------------------------------------------------------
         // Set all motors run Mode
@@ -209,7 +211,7 @@ public class Robot
         m_rightRearDrive .setMode( DcMotor.RunMode.STOP_AND_RESET_ENCODER );
         m_foldMotor      .setMode( DcMotor.RunMode.STOP_AND_RESET_ENCODER );
         m_liftMotor      .setMode (DcMotor.RunMode.STOP_AND_RESET_ENCODER );
-        m_armMotor       .setMode (DcMotor.RunMode.STOP_AND_RESET_ENCODER );
+//        m_armMotor       .setMode (DcMotor.RunMode.STOP_AND_RESET_ENCODER );
 
         m_leftFrontDrive .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
         m_leftRearDrive  .setMode( DcMotor.RunMode.RUN_USING_ENCODER   );
@@ -219,29 +221,33 @@ public class Robot
 
         m_foldMotor      .setMode( DcMotor.RunMode.RUN_USING_ENCODER   );
         m_liftMotor      .setMode( DcMotor.RunMode.RUN_USING_ENCODER   );
-        m_armMotor       .setMode( DcMotor.RunMode.RUN_USING_ENCODER   );
+//        m_armMotor       .setMode( DcMotor.RunMode.RUN_USING_ENCODER   );
 
 
-        m_armMotor.setZeroPowerBehavior( DcMotor.ZeroPowerBehavior.BRAKE );
+//        m_armMotor.setZeroPowerBehavior( DcMotor.ZeroPowerBehavior.BRAKE );
 
         // ------------------------------------------------------------------
         // Define and initialize ALL installed servos.
         // ------------------------------------------------------------------
 
-        m_dump   = m_hwMap.get( Servo.class, DUMP_SERVO  );
+        m_dump1   = m_hwMap.get( Servo.class, DUMP_SERVO_1  );
+        m_dump2   = m_hwMap.get( Servo.class, DUMP_SERVO_2  );
         m_claw   = m_hwMap.get( Servo.class, CLAW_SERVO  );
-        m_paddle = m_hwMap.get( Servo.class, PADDLE_SERVO);
-        m_tilt   = m_hwMap.get( Servo.class, TILT_SERVO  );
+//        m_paddle = m_hwMap.get( Servo.class, PADDLE_SERVO);
+//        m_tilt   = m_hwMap.get( Servo.class, TILT_SERVO  );
 
-        m_dump  .setPosition( 1.0 );
-        m_tilt  .setPosition( 0 );
+        m_dump2.setDirection( Servo.Direction.REVERSE );
+
+//        m_dump  .setPosition( 1.0 );
+//        m_tilt  .setPosition( 0 );
 
         Lift = new Lift( m_liftMotor, m_limitTop, m_limitBottom );
-        Arm  = new Arm ( m_armMotor, m_dump );
+//        Arm  = new Arm ( m_armMotor, m_dump );
         Fold = new Fold( m_foldMotor );
 
+        SetDumpPosition( 0 );
         CloseClaw();
-        CaptureElements();
+//        CaptureElements();
     }
 
     // //////////////////////////////////////////////////////////////////////
@@ -251,7 +257,7 @@ public class Robot
     public void AddTelemtry(Telemetry telemetry)
     {
         // telemetry.addData("Sorter Pos",  "%f", m_dump.getPosition());
-        telemetry.addData( "paddle Pos", "%f", m_paddle.getPosition());
+//        telemetry.addData( "paddle Pos", "%f", m_paddle.getPosition());
 
         //telemetry.addData("Lift Pos",  "%d", Lift.CurrentPos());
         telemetry.addData("Lift Pos",  "%d", Lift.CurrentPos());
@@ -282,20 +288,9 @@ public class Robot
     // Paddle
     // //////////////////////////////////////////////////////////////////////
 
-    public void CaptureElements()
-    {
-        m_paddle.setPosition( 0.9 );
-    }
-
-    public void ReleaseElements()
-    {
-        m_paddle.setPosition( 0.5 );
-    }
-
-    public void SetPaddlePos(double dPos)
-    {
-        m_paddle.setPosition( dPos );
-    }
+//    public void CaptureElements() { m_paddle.setPosition( 0.9 ); }
+//    public void ReleaseElements() { m_paddle.setPosition( 0.5 ); }
+//    public void SetPaddlePos(double dPos) { m_paddle.setPosition( dPos ); }
 
     // //////////////////////////////////////////////////////////////////////
     // Open & Close Claw Functions
@@ -330,8 +325,18 @@ public class Robot
     //
     // //////////////////////////////////////////////////////////////////////
 
-    public void TiltUp  () { m_tilt.setPosition( 1 ); }
-    public void TiltDown() { m_tilt.setPosition( 0 ); }
+//    public void TiltUp  () { m_tilt.setPosition( 1 ); }
+//    public void TiltDown() { m_tilt.setPosition( 0 ); }
+
+    // //////////////////////////////////////////////////////////////////////
+    //
+    // //////////////////////////////////////////////////////////////////////
+
+    public void SetDumpPosition( double dPos )
+    {
+        m_dump1.setPosition( dPos );
+        m_dump2.setPosition( dPos );
+    }
 
     // //////////////////////////////////////////////////////////////////////
     //

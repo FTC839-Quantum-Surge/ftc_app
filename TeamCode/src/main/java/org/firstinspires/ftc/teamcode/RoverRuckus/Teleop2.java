@@ -234,10 +234,10 @@ public class Teleop2 extends OpMode {
         // Raise / lower Tilt
         // ------------------------------------------------------------------
 
-        if (gamepad2.x)
-            m_robot.TiltUp();
-        else
-            m_robot.TiltDown();
+//        if (gamepad2.x)
+//            m_robot.TiltUp();
+//        else
+//            m_robot.TiltDown();
 
         // ------------------------------------------------------------------
         // Send telemetry message to signify robot running;

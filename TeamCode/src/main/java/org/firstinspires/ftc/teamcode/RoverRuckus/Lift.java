@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.hardware.AnalogInput;
 public class Lift  extends Targetable< Lift.PosEnum >
 {
     private static final int   LIFT_TOP                     = 19725;
+    private static final int   LIFT_SAFE_TO_DUMP            = 15000;
     private static final int   LIFT_LATCH                   = 11250; //11000=not working  //11500   //12000;    //10000;
 
     private AnalogInput m_limitTop;
@@ -15,6 +16,7 @@ public class Lift  extends Targetable< Lift.PosEnum >
     {
         None,
         Top,
+        SafeToDump,
         Hook,
         Bottom
     }
@@ -49,13 +51,14 @@ public class Lift  extends Targetable< Lift.PosEnum >
     // //////////////////////////////////////////////////////////////////////
 
     @Override
-    protected int GetEncoderTargetValue( Lift.PosEnum eTarget)
+    public int GetEncoderTargetValue( Lift.PosEnum eTarget)
     {
         switch ( eTarget)
         {
-            case Top:       return LIFT_TOP;
-            case Hook:      return LIFT_LATCH;
-            case Bottom:    return m_nHomeEncPos;
+            case Top:        return LIFT_TOP          + m_nHomeEncPos;
+            case SafeToDump: return LIFT_SAFE_TO_DUMP + m_nHomeEncPos;
+            case Hook:       return LIFT_LATCH        + m_nHomeEncPos;
+            case Bottom:     return m_nHomeEncPos;
         }
 
         return 0;
