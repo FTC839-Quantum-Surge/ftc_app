@@ -5,9 +5,9 @@ import com.qualcomm.robotcore.hardware.AnalogInput;
 
 public class Lift  extends Targetable< Lift.PosEnum >
 {
-    private static final int   LIFT_TOP                     = 19725;
-    private static final int   LIFT_SAFE_TO_DUMP            = 15000;
-    private static final int   LIFT_LATCH                   = 11250; //11000=not working  //11500   //12000;    //10000;
+    private static final int   LIFT_TOP                     = 21300;
+    private static final int   LIFT_SAFE_TO_DUMP            = 17500;
+    private static final int   LIFT_LATCH                   = 10541; //11000=not working  //11500   //12000;    //10000;
 
     private AnalogInput m_limitTop;
     private AnalogInput m_limitBottom;

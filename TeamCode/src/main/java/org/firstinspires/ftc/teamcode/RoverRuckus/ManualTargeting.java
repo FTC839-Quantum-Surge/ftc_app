@@ -59,10 +59,20 @@ public abstract class ManualTargeting< T >
     // //////////////////////////////////////////////////////////////////////
     //
     // //////////////////////////////////////////////////////////////////////
-
     public void Stop( boolean bHoldPosition )
     {
+        Stop( bHoldPosition, false );
+    }
+
+    public void Stop( boolean bHoldPosition, boolean bResetHome )
+    {
         m_motor.setPower(0);
+
+        if (bResetHome)
+        {
+            m_motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            m_nHomeEncPos = m_motor.getCurrentPosition();       // should always be 0!
+        }
 
         if (!bHoldPosition)
         {
@@ -183,18 +193,18 @@ public abstract class ManualTargeting< T >
         // check limit switch for now
         // ------------------------------------------------------------------
 
-        if (m_eTargetPos == GetNotTargetingValue() )
+        //if (m_eTargetPos == GetNotTargetingValue() )
         {
             if ((bLimitTop == true) && (dPower > 0))
             {
-                Stop( false );
+                Stop( false  );
                 return true;
             }
         }
 
         if ((bLimitBottom == true) && (dPower < 0))
         {
-            Stop( false );
+            Stop( false, true );
             return true;
         }
 

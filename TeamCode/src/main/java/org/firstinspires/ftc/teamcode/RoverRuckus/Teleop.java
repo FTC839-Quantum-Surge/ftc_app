@@ -53,7 +53,7 @@ import org.firstinspires.ftc.robotcontroller.external.samples.HardwarePushbot;
  */
 
 @TeleOp(name="Teleop", group="Quantum")
-@Disabled
+//@Disabled
 public class Teleop extends OpMode {
 
     /* Declare OpMode members. */
@@ -123,15 +123,16 @@ public class Teleop extends OpMode {
 
         // Use tank drive
 
-        left  = -gamepad1.left_stick_y;
-        right = -gamepad1.right_stick_y;
+
+        left  = Robot.scaleInput( -gamepad1.right_stick_y );
+        right = Robot.scaleInput( -gamepad1.left_stick_y  );
 
         // Adjust for dead zone...
         if (Math.abs( left ) < .1)
             left = 0;
 
         if (Math.abs( right ) < .1)
-            left = 0;
+            right = 0;
 
         // Override is pivot turn
 
@@ -187,7 +188,7 @@ public class Teleop extends OpMode {
         if (gamepad2.a)
             m_robot.Lift.SetTarget( Lift.PosEnum.Bottom, 1 );
 
-        m_robot.Lift.PeriodicCheck( gamepad2.right_stick_y );
+        m_robot.Lift.PeriodicCheck( -gamepad2.right_stick_y );
 
         // ------------------------------------------------------------------
         // Fold
@@ -202,13 +203,13 @@ public class Teleop extends OpMode {
         if (gamepad2.dpad_down)
             m_robot.Fold.SetTarget( Fold.PosEnum.Floor, 0.5, false );
 
-        m_robot.Fold.PeriodicCheck(  -gamepad2.left_stick_y );
+        m_robot.Fold.PeriodicCheck(   Robot.scaleInput( gamepad2.left_stick_y ));
 
         // ------------------------------------------------------------------
         // intake
         // ------------------------------------------------------------------
 
-        m_robot.SetIntakePower( gamepad2.right_trigger - gamepad2.left_trigger);
+        m_robot.SetIntakePower(  Robot.scaleInput( gamepad2.right_trigger - gamepad2.left_trigger ));
 
         // ------------------------------------------------------------------
         // Dump - Only allow dumping if above hook height
@@ -217,9 +218,11 @@ public class Teleop extends OpMode {
         int nMinLiftHeight = m_robot.Lift.GetEncoderTargetValue( Lift.PosEnum.SafeToDump );
 
         if (gamepad2.right_bumper && (m_robot.Lift.CurrentPos() > nMinLiftHeight))
-            m_robot.SetDumpPosition( 0.375 );
+            m_robot.SetDumpPosition( 0.425 ); //0.375 );
+        else if (gamepad2.left_bumper && (m_robot.Lift.CurrentPos() > nMinLiftHeight))
+            m_robot.SetDumpPosition( 0.375 ); //0.375 );
         else
-            m_robot.SetDumpPosition( 0.0 );
+            m_robot.SetDumpPosition( 0.01 );
 
         // ------------------------------------------------------------------
         // Arm

@@ -56,7 +56,19 @@ public abstract class Targetable< T >
 
     public void Stop()
     {
+        Stop( false );
+    }
+
+    public void Stop( boolean bResetHome  )
+    {
         m_motor.setPower( 0 );
+
+        if (bResetHome)
+        {
+            m_motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            m_nHomeEncPos = m_motor.getCurrentPosition();       // should always be 0!
+        }
+
         m_motor.setMode( DcMotor.RunMode.RUN_USING_ENCODER );
 
         m_eTargetPos = GetNotTargetingValue();
@@ -150,12 +162,29 @@ public abstract class Targetable< T >
                 return true;
             }
         }
+        else
+        {
+            if ((bLimitTop == true) && m_motor.getPower() > 0)
+            {
+                Stop();
+                return true;
+            }
+        }
 
         if ((bLimitBottom == true) && (dPower < 0))
         {
-            Stop();
+            Stop( true );
             return true;
         }
+        else
+        {
+            if ((bLimitBottom == true) && (m_motor.getPower() < 0))
+            {
+                Stop( true );
+                return true;
+            }
+        }
+
 
         SetPower( dPower );
 

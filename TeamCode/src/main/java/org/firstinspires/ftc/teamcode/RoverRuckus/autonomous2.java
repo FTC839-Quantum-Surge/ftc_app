@@ -192,7 +192,7 @@ public class autonomous2 extends LinearOpMode {
         // Drive forward 6 inches
         // ------------------------------------------------------------------
 
-        robot.DriveDistance( DRIVE_SPEED,  -3,  -3, 1.0 );
+        robot.DriveDistance( DRIVE_SPEED,  -8,  -8, 1.0 );
 
 
         // ------------------------------------------------------------------

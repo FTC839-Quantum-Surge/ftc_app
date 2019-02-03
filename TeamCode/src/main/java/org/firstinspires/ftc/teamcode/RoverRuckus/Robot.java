@@ -29,10 +29,12 @@
 
 package org.firstinspires.ftc.teamcode.RoverRuckus;
 
+import com.qualcomm.hardware.rev.RevTouchSensor;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -72,12 +74,15 @@ public class Robot
 
     private static final String DUMP_SERVO_1                = "dump1";
     private static final String DUMP_SERVO_2                = "dump2";
+
     private static final String CLAW_SERVO                  = "claw";
 //    private static final String PADDLE_SERVO                = "paddle";
 //    private static final String TILT_SERVO                  = "tilt";
 
     private static final String LIMIT_TOP                   = "limitTop";
     private static final String LIMIT_BOTTOM                = "limitBottom";
+
+    private static final String LIMIT_FOLD                  = "limitFold";
 
 // Encoder Count Per rev
 // NeverRest (7 ppr without gearbox)
@@ -113,6 +118,7 @@ public class Robot
 
     public  Servo    m_dump1               = null;
     public  Servo    m_dump2               = null;
+
     private Servo    m_claw                = null;
 //    public  Servo    m_paddle              = null;
 //    public  Servo    m_tilt                = null;
@@ -122,6 +128,8 @@ public class Robot
 
     private AnalogInput m_limitTop         = null;
     private AnalogInput m_limitBottom      = null;
+
+    private RevTouchSensor m_limitFold     = null;
 
     private ClawStateEnum   m_clawState    = ClawStateEnum.Unknown;
 
@@ -167,8 +175,9 @@ public class Robot
         m_liftMotor       = m_hwMap.get( DcMotor.class, LIFT_MOTOR                );
 //        m_armMotor        = m_hwMap.get( DcMotor.class, ARM_MOTOR                 );
 
-        m_limitTop        = m_hwMap.get( AnalogInput.class, LIMIT_TOP          );
-        m_limitBottom     = m_hwMap.get( AnalogInput.class, LIMIT_BOTTOM       );
+        m_limitTop        = m_hwMap.get( AnalogInput.class   , LIMIT_TOP          );
+        m_limitBottom     = m_hwMap.get( AnalogInput.class   , LIMIT_BOTTOM       );
+        m_limitFold       = m_hwMap.get( RevTouchSensor.class, LIMIT_FOLD         );
 
         // ------------------------------------------------------------------
         //
@@ -232,18 +241,20 @@ public class Robot
 
         m_dump1   = m_hwMap.get( Servo.class, DUMP_SERVO_1  );
         m_dump2   = m_hwMap.get( Servo.class, DUMP_SERVO_2  );
-        m_claw   = m_hwMap.get( Servo.class, CLAW_SERVO  );
+        m_claw    = m_hwMap.get( Servo.class, CLAW_SERVO    );
+
+
 //        m_paddle = m_hwMap.get( Servo.class, PADDLE_SERVO);
 //        m_tilt   = m_hwMap.get( Servo.class, TILT_SERVO  );
 
-        m_dump2.setDirection( Servo.Direction.REVERSE );
+        m_dump1.setDirection( Servo.Direction.REVERSE );
 
 //        m_dump  .setPosition( 1.0 );
 //        m_tilt  .setPosition( 0 );
 
         Lift = new Lift( m_liftMotor, m_limitTop, m_limitBottom );
 //        Arm  = new Arm ( m_armMotor, m_dump );
-        Fold = new Fold( m_foldMotor );
+        Fold = new Fold( m_foldMotor, m_limitFold );
 
         SetDumpPosition( 0 );
         CloseClaw();
@@ -260,6 +271,7 @@ public class Robot
 //        telemetry.addData( "paddle Pos", "%f", m_paddle.getPosition());
 
         //telemetry.addData("Lift Pos",  "%d", Lift.CurrentPos());
+        telemetry.addData( "Fold Limit", "%b", m_limitFold.isPressed());
         telemetry.addData("Lift Pos",  "%d", Lift.CurrentPos());
         telemetry.addData("Fold Pos",  "%d", Fold.CurrentPos());
         telemetry.addData("L. W Pos",  "%d", GetLeftDrivePos());
@@ -455,6 +467,43 @@ public class Robot
         // 3) wait for Gyro to meet or exceed requested value
         // SetDrivePower( 0, 0 );   // Stop Motots
 
+    }
+
+     /*
+     * This method scales the joystick input so for low joystick values, the
+     * scaled value is less than linear.  This is to make it easier to drive
+     * the robot more precisely at slower speeds.
+     */
+     public static double scaleInput( double dVal )
+     {
+        double[] scaleArray = { 0.0, 0.05, 0.09, 0.10, 0.12, 0.15, 0.18, 0.24,
+                0.30, 0.36, 0.43, 0.50, 0.60, 0.72, 0.85, 1.00, 1.00 };
+
+        // get the corresponding index for the scaleInput array.
+        int index = (int) (dVal * 16.0);
+
+        // index should be positive.
+        if (index < 0)
+        {
+            index = -index;
+        }
+
+        // index cannot exceed size of array minus 1.
+        if (index > 16)
+        {
+            index = 16;
+        }
+
+        // get value from the array.
+        double dScale = 0.0;
+
+        if (dVal < 0)
+            dScale = -scaleArray[index];
+        else
+            dScale = scaleArray[index];
+
+        // return scaled value.
+        return dScale;
     }
 }
 

@@ -29,6 +29,7 @@
 
 package org.firstinspires.ftc.teamcode.RoverRuckus;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.Range;
@@ -49,7 +50,7 @@ import com.qualcomm.robotcore.util.Range;
  */
 
 @TeleOp(name="Teleop2", group="Quantum")
-//@Disabled
+@Disabled
 public class Teleop2 extends OpMode {
 
     /* Declare OpMode members. */
