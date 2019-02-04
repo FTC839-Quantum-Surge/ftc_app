@@ -29,6 +29,8 @@
 
 package org.firstinspires.ftc.teamcode.RoverRuckus;
 
+import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.hardware.rev.RevTouchSensor;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -38,8 +40,15 @@ import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
+import org.firstinspires.ftc.robotcore.external.navigation.Position;
+import org.firstinspires.ftc.robotcore.external.navigation.Velocity;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 /**
  * This is the Hardware Configuration class for the 2018-2019 Rover Ruckus design.
@@ -61,6 +70,7 @@ public class Robot
     // ----------------------------------------------------------------------
     // Private Constants
     // ----------------------------------------------------------------------
+    private static final String GYRO                        = "imu";
 
     private static final String LEFT_FRONT_DRIVE_MOTOR      = "LF_drive";
     private static final String LEFT_REAR_DRIVE_MOTOR       = "LR_drive";
@@ -84,6 +94,11 @@ public class Robot
 
     private static final String LIMIT_FOLD                  = "limitFold";
 
+    static final double     HEADING_THRESHOLD       = 1 ;      // As tight as we can make it with an integer gyro
+    static final double     P_TURN_COEFF            = 0.1;     // Larger is more responsive, but also less stable
+    static final double     P_DRIVE_COEFF           = 0.15;     // Larger is more responsive, but also less stable
+
+
 // Encoder Count Per rev
 // NeverRest (7 ppr without gearbox)
 //    40:1  = 280ppr
@@ -106,7 +121,7 @@ public class Robot
     private ElapsedTime  m_period    = new ElapsedTime();
     private ElapsedTime  m_runtime   = new ElapsedTime();
 
-
+    private BNO055IMU m_imu                = null;
     private DcMotor  m_leftFrontDrive      = null;
     private DcMotor  m_leftRearDrive       = null;
     private DcMotor  m_rightFrontDrive     = null;
@@ -161,6 +176,27 @@ public class Robot
         // ------------------------------------------------------------------
 
         m_hwMap = ahwMap;
+
+        // Set up the parameters with which we will use our IMU. Note that integration
+        // algorithm here just reports accelerations to the logcat log; it doesn't actually
+        // provide positional information.
+
+        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
+
+        parameters.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
+        parameters.accelUnit           = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
+        parameters.calibrationDataFile = "BNO055IMUCalibration.json"; // see the calibration sample opmode
+        parameters.loggingEnabled      = true;
+        parameters.loggingTag          = "IMU";
+        parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
+
+        // Retrieve and initialize the IMU. We expect the IMU to be attached to an I2C port
+        // on a Core Device Interface Module, configured to be a sensor of type "AdaFruit IMU",
+        // and named "imu".
+
+        m_imu = m_hwMap.get(BNO055IMU.class, GYRO);
+
+        m_imu.initialize(parameters);
 
         // ------------------------------------------------------------------
         // Define and Initialize Motors
@@ -259,6 +295,17 @@ public class Robot
         SetDumpPosition( 0 );
         CloseClaw();
 //        CaptureElements();
+    }
+
+    // //////////////////////////////////////////////////////////////////////
+    //
+    // //////////////////////////////////////////////////////////////////////
+
+    public void OpModeStarted()
+    {
+        // Start the logging of measured acceleration
+        m_imu.startAccelerationIntegration(new Position(), new Velocity(), 1000);
+
     }
 
     // //////////////////////////////////////////////////////////////////////
@@ -454,13 +501,21 @@ public class Robot
     // TODO: Use IMU (gyro) or Encoders to turn specified number of degrees
     // //////////////////////////////////////////////////////////////////////
 
-    public void PivitTurn( double dPower, double dDegrees )
+    public void PivitTurn( double dSpeed, double dAngle )
     {
         // ------------------------------------------------------------------
         // If requested to turn counter clockwise, negate dPower;
         // ------------------------------------------------------------------
 
-        dPower *= (dDegrees < 0) ? -1 : 1;
+        //dPower *= (dDegrees < 0) ? -1 : 1;
+        // keep looping while we are still active, and not on heading.
+
+        while ( ((LinearOpMode)m_opMode).opModeIsActive() && !onHeading(dSpeed, dAngle, P_TURN_COEFF))
+        {
+            // Update telemetry & Allow time for other processes to run.
+            m_opMode.telemetry.update();
+        }
+
 
         // 1) get current Gyro heading;
         // 2) SetDrivePower( dPower, -dPower );
@@ -469,7 +524,84 @@ public class Robot
 
     }
 
-     /*
+    /**
+     * Perform one cycle of closed loop heading control.
+     *
+     * @param speed     Desired speed of turn.
+     * @param angle     Absolute Angle (in Degrees) relative to last gyro reset.
+     *                  0 = fwd. +ve is CCW from fwd. -ve is CW from forward.
+     *                  If a relative angle is required, add/subtract from current heading.
+     * @param PCoeff    Proportional Gain coefficient
+     * @return
+     */
+    boolean onHeading(double speed, double angle, double PCoeff)
+    {
+        double   error ;
+        double   steer ;
+        boolean  onTarget = false ;
+        double   leftSpeed;
+        double   rightSpeed;
+
+        // determine turn power based on +/- error
+        error = getError(angle);
+
+        if (Math.abs(error) <= HEADING_THRESHOLD) {
+            steer = 0.0;
+            leftSpeed  = 0.0;
+            rightSpeed = 0.0;
+            onTarget = true;
+        }
+        else {
+            steer = getSteer(error, PCoeff);
+            rightSpeed  = speed * steer;
+            leftSpeed   = -rightSpeed;
+        }
+
+        // Send desired speeds to motors.
+
+        SetDrivePower( leftSpeed, rightSpeed );
+
+        // Display it for the driver.
+        m_opMode.telemetry.addData("Target", "%5.2f", angle);
+        m_opMode.telemetry.addData("Err/St", "%5.2f/%5.2f", error, steer);
+        m_opMode.telemetry.addData("Speed.", "%5.2f:%5.2f", leftSpeed, rightSpeed);
+
+        m_opMode.telemetry.update();
+        return onTarget;
+    }
+
+    /**
+     * getError determines the error between the target angle and the robot's current heading
+     * @param   targetAngle  Desired angle (relative to global reference established at last Gyro Reset).
+     * @return  error angle: Degrees in the range +/- 180. Centered on the robot's frame of reference
+     *          +ve error means the robot should turn LEFT (CCW) to reduce error.
+     */
+    public double getError(double targetAngle) {
+
+        double robotError;
+        Orientation angles;
+
+        // calculate error in -179 to +180 range  (
+        angles = m_imu.getAngularOrientation( AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+
+
+        robotError = targetAngle - angles.thirdAngle;     //gyro.getIntegratedZValue();
+        while (robotError > 180)  robotError -= 360;
+        while (robotError <= -180) robotError += 360;
+        return robotError;
+    }
+
+    /**
+     * returns desired steering force.  +/- 1 range.  +ve = steer left
+     * @param error   Error angle in robot relative degrees
+     * @param PCoeff  Proportional Gain Coefficient
+     * @return
+     */
+    public double getSteer(double error, double PCoeff) {
+        return Range.clip(error * PCoeff, -1, 1);
+    }
+
+    /*
      * This method scales the joystick input so for low joystick values, the
      * scaled value is less than linear.  This is to make it easier to drive
      * the robot more precisely at slower speeds.
