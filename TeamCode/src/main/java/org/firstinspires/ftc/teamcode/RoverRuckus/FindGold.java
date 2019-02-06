@@ -35,6 +35,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
+import java.lang.annotation.ElementType;
+
 import fi.iki.elonen.NanoHTTPD;
 
 /**
@@ -68,6 +70,14 @@ import fi.iki.elonen.NanoHTTPD;
 //@Disabled
 public class FindGold extends LinearOpMode {
 
+    public enum  elementLocation
+    {
+        Unknown,
+        Left,
+        Center,
+        Right
+    }
+
     /* Declare OpMode members. */
     private Robot            robot       = new Robot( this );   // Use a Pushbot's hardware
     private ImageDetect      imageDetect = new ImageDetect();
@@ -89,21 +99,20 @@ public class FindGold extends LinearOpMode {
          * The init() method of the hardware class does all the work here
          */
         robot.init(hardwareMap);
-        imageDetect.Initialize( hardwareMap, telemetry );
+//        imageDetect.Initialize( hardwareMap, telemetry );
 
         // -------------------------------------------------------------------
         // Wait for the game to start (driver presses PLAY)
         // -------------------------------------------------------------------
 
         waitForStart();
-
+/*
         robot.OpModeStarted();
 
         // detect gold position before we lower ourself
 
         ImageDetect.GoldPositionInfo goldPos = imageDetect.DetectMinierals();
 
-/*
         // ------------------------------------------------------------------
         // Fold move to vertical
         // ------------------------------------------------------------------
@@ -158,26 +167,83 @@ public class FindGold extends LinearOpMode {
         robot.Lift.SetTarget( Lift.PosEnum.Bottom, 1 );
 
         // ------------------------------------------------------------------
-        // Drive forward 2 inches
+        // Drive forward a little
         // ------------------------------------------------------------------
-
-        robot.DriveDistance( DRIVE_SPEED,  -2,  -2, 1.0 );
 */
-
-//        if ( goldPos.found())
-        {
-            while ( opModeIsActive()  )
-            {
-
-                if (goldPos.found())
-                    robot.PivitTurn(0.5, goldPos.angle);
-
-                goldPos = imageDetect.DetectMinierals();
-            }
-        }
+        robot.DriveDistance( 0.1,  24,  24, 90.0 );
 /*
         // ------------------------------------------------------------------
-        // Drive forward 16 inches
+        // Determine which direction gold is
+        // ------------------------------------------------------------------
+
+        sleep( 2000 );
+
+        goldPos = imageDetect.DetectMinierals();
+
+        // TODO: May want to loop until gold found or a timeout.
+
+        elementLocation eLoc = elementLocation.Unknown;
+
+        if (goldPos.found())
+        {
+            if (goldPos.angle > 10 )
+                eLoc = elementLocation.Right;
+            else if (goldPos.angle < -10 )
+                eLoc = elementLocation.Left;
+            else
+                eLoc = elementLocation.Center;
+        }
+        telemetry.addData( "Gold Found %b", goldPos.found());
+        telemetry.addData( "Gold Found %d", goldPos.count  );
+        telemetry.addData( "Gold Found %d", goldPos.angle  );
+        telemetry.addData( "eLoc d%"      , eLoc           );
+
+        telemetry.update();
+
+        sleep( 5000 );
+
+        switch( eLoc )
+        {
+            case Right:
+            {
+                telemetry.addData( "Driving Right", null  );
+
+                robot.DriveDistance( .3, 8, 0, 10);
+
+                sleep( 1000 );
+
+         //      robot.DriveDistance( .5, -30, -30, 10);
+
+         //       sleep( 1000 );
+
+         //       robot.DriveDistance( .5,  30, 30, 10);
+         //       sleep( 1000 );
+
+         //       robot.DriveDistance( .3, -8, 0, 10);
+         //       sleep( 1000 );
+
+
+                break;
+            }
+
+            case Center:
+            {
+
+                break;
+            }
+
+            case Left:
+            {
+
+                break;
+            }
+
+        }
+*/
+/*
+
+        // ------------------------------------------------------------------
+        // Drive forward a given distance
         // ------------------------------------------------------------------
 
         robot.DriveDistance( DRIVE_SPEED,  -30,  -30, 1.0 );
@@ -198,7 +264,6 @@ public class FindGold extends LinearOpMode {
         {
             bFoldComplete = robot.Fold.PeriodicCheck( 0 );
         }
-
 
 
         // ------------------------------------------------------------------
@@ -222,10 +287,17 @@ public class FindGold extends LinearOpMode {
 
         robot.SetDrivePower( 0, 0 );
 
+        // ------------------------------------------------------------------
+        // Fold move to folded
+        // ------------------------------------------------------------------
+
+        robot.Fold.SetTarget( Fold.PosEnum.Folded, .25, true );
+*/
+
+        imageDetect.Stop();
 
         sleep( 30000 );
 
-*/
 
         //telemetry.addData("Path", "Complete");
        // telemetry.update();

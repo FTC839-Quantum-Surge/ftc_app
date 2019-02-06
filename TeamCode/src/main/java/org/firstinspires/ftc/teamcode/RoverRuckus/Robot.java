@@ -32,10 +32,14 @@ package org.firstinspires.ftc.teamcode.RoverRuckus;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.hardware.rev.RevTouchSensor;
+import com.qualcomm.hardware.motors.NeveRest40Gearmotor;
+
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -107,10 +111,10 @@ public class Robot
 //
 // Hex Core Motor (4 ppr without gearbox) 288 ppr at axle
 
-    static final double     COUNTS_PER_MOTOR_REV    = 280 ;    // eg: NeverRest 40:1 (7 pulses at motor) Encoder
+    static final double     COUNTS_PER_MOTOR_REV    = 1120 ;    // eg: NeverRest 40:1 (7 pulses at motor) Encoder
     static final double     DRIVE_GEAR_REDUCTION    = 1.0 ;     // This is < 1.0 if geared UP
     static final double     WHEEL_DIAMETER_INCHES   = 4.0 ;     // For figuring circumference
-    static final double     COUNTS_PER_INCH         = -(COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) / (WHEEL_DIAMETER_INCHES * 3.1415);
+    static final double     COUNTS_PER_INCH         = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) / (WHEEL_DIAMETER_INCHES * 3.1415);
 
     // ----------------------------------------------------------------------
     // Public Member Variables
@@ -122,10 +126,10 @@ public class Robot
     private ElapsedTime  m_runtime   = new ElapsedTime();
 
     private BNO055IMU m_imu                = null;
-    private DcMotor  m_leftFrontDrive      = null;
-    private DcMotor  m_leftRearDrive       = null;
-    private DcMotor  m_rightFrontDrive     = null;
-    private DcMotor  m_rightRearDrive      = null;
+    private DcMotorEx  m_leftFrontDrive      = null;
+    private DcMotorEx  m_leftRearDrive       = null;
+    private DcMotorEx  m_rightFrontDrive     = null;
+    private DcMotorEx  m_rightRearDrive      = null;
     public  DcMotor  m_intake              = null;
     private DcMotor  m_foldMotor           = null;
     private DcMotor  m_liftMotor           = null;
@@ -202,10 +206,10 @@ public class Robot
         // Define and Initialize Motors
         // ------------------------------------------------------------------
 
-        m_leftFrontDrive  = m_hwMap.get( DcMotor.class, LEFT_FRONT_DRIVE_MOTOR    );
-        m_leftRearDrive   = m_hwMap.get( DcMotor.class, LEFT_REAR_DRIVE_MOTOR     );
-        m_rightFrontDrive = m_hwMap.get( DcMotor.class, RIGHT_FRONT_DRIVE_MOTOR   );
-        m_rightRearDrive  = m_hwMap.get( DcMotor.class, RIGHT_REAR_DRIVE_MOTOR    );
+        m_leftFrontDrive  = (DcMotorEx)m_hwMap.get( DcMotorEx.class, LEFT_FRONT_DRIVE_MOTOR    );
+        m_leftRearDrive   = (DcMotorEx)m_hwMap.get( DcMotorEx.class, LEFT_REAR_DRIVE_MOTOR     );
+        m_rightFrontDrive = (DcMotorEx)m_hwMap.get( DcMotorEx.class, RIGHT_FRONT_DRIVE_MOTOR   );
+        m_rightRearDrive  = (DcMotorEx)m_hwMap.get( DcMotorEx.class, RIGHT_REAR_DRIVE_MOTOR    );
         m_intake          = m_hwMap.get( DcMotor.class, INTAKE_MOTOR              );
         m_foldMotor       = m_hwMap.get( DcMotor.class, FOLD_MOTOR                );
         m_liftMotor       = m_hwMap.get( DcMotor.class, LIFT_MOTOR                );
@@ -226,11 +230,11 @@ public class Robot
         // Set direction of drive motors (one side needs to be opposite)
         // ------------------------------------------------------------------
 
-        m_leftFrontDrive  .setDirection( DcMotor.Direction.FORWARD );
-        m_leftRearDrive   .setDirection( DcMotor.Direction.FORWARD );
+//        m_leftFrontDrive  .setDirection( DcMotor.Direction.REVERSE );
+//        m_leftRearDrive   .setDirection( DcMotor.Direction.REVERSE );
 
-        m_rightFrontDrive .setDirection( DcMotor.Direction.REVERSE );
-        m_rightRearDrive  .setDirection( DcMotor.Direction.REVERSE );
+//        m_rightFrontDrive .setDirection( DcMotor.Direction.REVERSE );
+//        m_rightRearDrive  .setDirection( DcMotor.Direction.REVERSE );
 
         m_liftMotor       .setDirection( DcMotor.Direction.REVERSE );
 //        m_armMotor        .setDirection( DcMotor.Direction.REVERSE );
@@ -252,16 +256,16 @@ public class Robot
         // Set all motors run Mode
         // ------------------------------------------------------------------
 
-        m_leftRearDrive  .setMode( DcMotor.RunMode.STOP_AND_RESET_ENCODER );
-        m_rightRearDrive .setMode( DcMotor.RunMode.STOP_AND_RESET_ENCODER );
+        m_leftFrontDrive  .setMode( DcMotor.RunMode.STOP_AND_RESET_ENCODER );
+        m_rightFrontDrive .setMode( DcMotor.RunMode.STOP_AND_RESET_ENCODER );
         m_foldMotor      .setMode( DcMotor.RunMode.STOP_AND_RESET_ENCODER );
         m_liftMotor      .setMode (DcMotor.RunMode.STOP_AND_RESET_ENCODER );
 //        m_armMotor       .setMode (DcMotor.RunMode.STOP_AND_RESET_ENCODER );
 
-        m_leftFrontDrive .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
-        m_leftRearDrive  .setMode( DcMotor.RunMode.RUN_USING_ENCODER   );
-        m_rightFrontDrive.setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
-        m_rightRearDrive .setMode( DcMotor.RunMode.RUN_USING_ENCODER   );
+        m_leftFrontDrive .setMode( DcMotor.RunMode.RUN_USING_ENCODER );
+        m_leftRearDrive  .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER   );
+        m_rightFrontDrive.setMode( DcMotor.RunMode.RUN_USING_ENCODER );
+        m_rightRearDrive .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER   );
         m_intake         .setMode( DcMotor.RunMode.RUN_USING_ENCODER   );
 
         m_foldMotor      .setMode( DcMotor.RunMode.RUN_USING_ENCODER   );
@@ -324,8 +328,8 @@ public class Robot
         telemetry.addData("L. W Pos",  "%d", GetLeftDrivePos());
         telemetry.addData("R. W Pos",  "%d", GetRightDrivePos());
 
-        telemetry.addData( "RR Pwrs", "%f", m_rightRearDrive.getPower());
-        telemetry.addData( "LR Pwrs", "%f", m_leftRearDrive.getPower());
+        telemetry.addData( "RR Pwrs", "%f", m_rightFrontDrive.getPower());
+        telemetry.addData( "LR Pwrs", "%f", m_leftFrontDrive.getPower());
 
         telemetry.addData( "RF Pwrs", "%f", m_rightFrontDrive.getPower());
         telemetry.addData( "LF Pwrs", "%f", m_leftFrontDrive.getPower());
@@ -340,8 +344,8 @@ public class Robot
     // //////////////////////////////////////////////////////////////////////
     // //////////////////////////////////////////////////////////////////////
 
-    public int GetLeftDrivePos () { return m_leftRearDrive.getCurrentPosition(); }
-    public int GetRightDrivePos() { return m_rightRearDrive.getCurrentPosition(); }
+    public int GetLeftDrivePos () { return m_leftFrontDrive.getCurrentPosition(); }
+    public int GetRightDrivePos() { return m_rightFrontDrive.getCurrentPosition(); }
 
     // //////////////////////////////////////////////////////////////////////
     // Paddle
@@ -440,20 +444,31 @@ public class Robot
 
             // Determine new target position, and pass to motor controller
 
-            newLeftTarget  = m_leftRearDrive .getCurrentPosition() + (int)(leftInches  * COUNTS_PER_INCH);
-            newRightTarget = m_rightRearDrive.getCurrentPosition() + (int)(rightInches * COUNTS_PER_INCH);
+            int nPos = m_leftFrontDrive .getCurrentPosition();
 
-            m_leftRearDrive .setTargetPosition(newLeftTarget);
-            m_rightRearDrive.setTargetPosition(newRightTarget);
+            newLeftTarget  = m_leftFrontDrive .getCurrentPosition() + (int)(leftInches  * COUNTS_PER_INCH);
+            newRightTarget = m_rightFrontDrive.getCurrentPosition() + (int)(rightInches * COUNTS_PER_INCH);
+
+            m_leftFrontDrive .setTargetPosition(newLeftTarget);
+            m_rightFrontDrive.setTargetPosition(newRightTarget);
 
             // Turn On RUN_TO_POSITION
-            m_leftRearDrive .setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            m_rightRearDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            m_leftFrontDrive .setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            m_rightFrontDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
             // reset the timeout time and start motion.
             m_runtime.reset();
 
-            SetDrivePower( Math.abs(speed), Math.abs(speed));
+            m_leftFrontDrive.setTargetPositionTolerance( 100 );
+            m_rightFrontDrive.setTargetPositionTolerance( 100 );
+
+            m_leftFrontDrive.setVelocity( 0.1);
+            m_rightFrontDrive.setVelocity( 0.1);
+
+            //SetDrivePower( Math.abs(speed), Math.abs(speed));
+
+            m_leftFrontDrive.setPower ( 1 ); //Math.abs(speed) );
+            m_rightFrontDrive.setPower( 1 ); //Math.abs(speed) );
 
             // keep looping while we are still active, and there is time left, and both motors are running.
             // Note: We use (isBusy() && isBusy()) in the loop test, which means that when EITHER motor hits
@@ -463,25 +478,32 @@ public class Robot
             // onto the next step, use (isBusy() || isBusy()) in the loop test.
             while (opMode.opModeIsActive() &&
                     (m_runtime.seconds() < timeoutS) &&
-                    (m_leftRearDrive.isBusy() && m_rightRearDrive.isBusy())) {
+                    (m_leftFrontDrive.isBusy() && m_rightFrontDrive.isBusy())) {
+
+                if (m_leftFrontDrive.isBusy() == false)
+                    m_leftFrontDrive.setPower( 0 );
+
+                if (m_rightFrontDrive.isBusy() == false)
+                    m_rightFrontDrive.setPower( 0 );
 
                 // Display it for the driver.
 
                 m_opMode.telemetry.addData("Path1",  "Running to %7d :%7d", newLeftTarget,  newRightTarget);
                 m_opMode.telemetry.addData("Path2",  "Running at %7d :%7d",
-                        m_leftRearDrive.getCurrentPosition(),
-                        m_rightRearDrive.getCurrentPosition());
+                        m_leftFrontDrive.getCurrentPosition(),
+                        m_rightFrontDrive.getCurrentPosition());
                 m_opMode.telemetry.update();
 
-                Lift.PeriodicCheck( 0 );
+             //   Lift.PeriodicCheck( 0 );
             }
 
             // Stop all motion;
             SetDrivePower( 0, 0);
 
+
             // Turn off RUN_TO_POSITION
-            m_leftRearDrive .setMode( DcMotor.RunMode.RUN_USING_ENCODER );
-            m_rightRearDrive.setMode( DcMotor.RunMode.RUN_USING_ENCODER );
+            m_leftFrontDrive .setMode( DcMotor.RunMode.RUN_USING_ENCODER );
+            m_rightFrontDrive.setMode( DcMotor.RunMode.RUN_USING_ENCODER );
 
             //  sleep(250);   // optional pause after each move
         }

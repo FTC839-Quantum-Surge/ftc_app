@@ -52,7 +52,35 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  *
  *  The code is written using a method called: encoderDrive(speed, leftInches, rightInches, timeoutS)
  *  that performs the actual movement.
- *  This methods assumes that each movement is relative to the last stopping place.
+ *
+ *         // ------------------------------------------------------------------
+ *         // Wait for Fold to stop
+ *         // ------------------------------------------------------------------
+ *
+ *         boolean bFoldedComplete = false;
+ *
+ *         while ( opModeIsActive()  && !bFoldComplete )
+ *         {
+ *             bFoldComplete = robot.Fold.PeriodicCheck( 0 );
+ *         }  // ------------------------------------------------------------------
+ *         // Wait for Fold to stop
+ *         // ------------------------------------------------------------------
+ *
+ *         boolean bFoldedComplete = false;
+ *
+ *         while ( opModeIsActive()  && !bFoldComplete )
+ *         {
+ *             bFoldComplete = robot.Fold.PeriodicCheck( 0 );
+ *         }  // ------------------------------------------------------------------
+ *         // Wait for Fold to stop
+ *         // ------------------------------------------------------------------
+ *
+ *         boolean bFoldedComplete = false;
+ *
+ *         while ( opModeIsActive()  && !bFoldComplete )
+ *         {
+ *             bFoldComplete = robot.Fold.PeriodicCheck( 0 );
+ *         }Drive to the last stopping place.
  *  There are other ways to perform encoder based moves, but this method is probably the simplest.
  *  This code uses the RUN_TO_POSITION mode to enable the Motor controllers to generate the run profile
  *
@@ -149,11 +177,6 @@ public class goldinmiddle extends LinearOpMode {
 
         robot.DriveDistance( DRIVE_SPEED,  -30,  -30, 1.0 );
 
-        // ------------------------------------------------------------------
-        // Fold move to folded
-        // ------------------------------------------------------------------
-
-        robot.Fold.SetTarget( Fold.PosEnum.Folded, .25, true );
 
         // ------------------------------------------------------------------
         // Wait for Fold to stop
@@ -190,9 +213,23 @@ public class goldinmiddle extends LinearOpMode {
         robot.SetDrivePower( 0, 0 );
 
 
+
+
+
+        // ------------------------------------------------------------------
+        // Fold move to folded
+        // ------------------------------------------------------------------
+
+        robot.Fold.SetTarget( Fold.PosEnum.Folded, .25, true );
+
+        sleep( 10000 );
+        // ------------------------------------------------------------------
+        // Fold move to folded
+        // ------------------------------------------------------------------
+
+        robot.Fold.SetTarget( Fold.PosEnum.Folded, .25, true );
+
         sleep( 30000 );
-
-
 
         //telemetry.addData("Path", "Complete");
        // telemetry.update();
