@@ -67,7 +67,7 @@ public class Teleop extends OpMode {
     @Override
     public void init()
     {
-        m_robot.init(hardwareMap);
+        m_robot.init(hardwareMap, false);
 
         // Send telemetry message to signify robot waiting;
         telemetry.addData("Say", "Hello Driver");

@@ -39,6 +39,7 @@ public class Lift  extends Targetable< Lift.PosEnum >
     // //////////////////////////////////////////////////////////////////////
 
     @Override protected Lift.PosEnum GetNotTargetingValue() { return PosEnum.None; }
+    @Override protected Lift.PosEnum GetTopTarget()         { return PosEnum.Top;  }
 
     @Override public boolean  GetLimitTop   () { return m_limitTop   .getVoltage() > 0.5; }
     @Override public boolean  GetLimitBottom() { return m_limitBottom.getVoltage() > 0.5; }

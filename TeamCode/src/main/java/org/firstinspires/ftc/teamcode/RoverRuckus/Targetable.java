@@ -14,6 +14,7 @@ public abstract class Targetable< T >
 
     abstract protected int GetEncoderTargetValue( T eTarget );
     abstract protected T   GetNotTargetingValue ();
+    abstract protected T   GetTopTarget();
 
     // //////////////////////////////////////////////////////////////////////
     // override to implement limit switches
@@ -69,7 +70,7 @@ public abstract class Targetable< T >
             m_nHomeEncPos = m_motor.getCurrentPosition();       // should always be 0!
         }
 
-        m_motor.setMode( DcMotor.RunMode.RUN_USING_ENCODER );
+        m_motor.setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
 
         m_eTargetPos = GetNotTargetingValue();
     }
@@ -164,7 +165,7 @@ public abstract class Targetable< T >
         }
         else
         {
-            if ((bLimitTop == true) && m_motor.getPower() > 0)
+            if ((bLimitTop == true) && (m_eTargetPos == GetTopTarget()))
             {
                 Stop();
                 return true;
@@ -176,6 +177,7 @@ public abstract class Targetable< T >
             Stop( true );
             return true;
         }
+/*
         else
         {
             if ((bLimitBottom == true) && (m_motor.getPower() < 0))
@@ -184,7 +186,7 @@ public abstract class Targetable< T >
                 return true;
             }
         }
-
+*/
 
         SetPower( dPower );
 

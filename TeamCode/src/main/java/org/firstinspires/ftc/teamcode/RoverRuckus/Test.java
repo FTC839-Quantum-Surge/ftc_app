@@ -62,7 +62,7 @@ public class Test extends OpMode {
     @Override
     public void init()
     {
-        m_robot.init(hardwareMap);
+        m_robot.init(hardwareMap, true);
 
         // Send telemetry message to signify robot waiting;
         telemetry.addData("Say", "Hello Test");
@@ -99,11 +99,7 @@ public class Test extends OpMode {
     //    telemetry.addData( "right1_y", "%f", gamepad1.right_stick_y );
     //    telemetry.addData( "right2_y", "%f", gamepad2.right_stick_y );
 
-        telemetry.addData("1 LeftTrigger", " %f", gamepad1.left_trigger );
-        telemetry.addData( "1 RightTrigger", "%f", gamepad1.right_trigger );
-
-        telemetry.addData("2 LeftTrigger", " %f", gamepad2.left_trigger );
-        telemetry.addData( "2 RightTrigger", "%f", gamepad2.right_trigger );
+        m_robot.AddTelemtry( telemetry );
 
         telemetry.update();
 

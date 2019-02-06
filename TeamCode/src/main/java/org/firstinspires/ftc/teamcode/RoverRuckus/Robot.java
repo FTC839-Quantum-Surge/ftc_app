@@ -42,7 +42,10 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.PIDCoefficients;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
@@ -84,23 +87,20 @@ public class Robot
     private static final String INTAKE_MOTOR                = "intake";
     private static final String FOLD_MOTOR                  = "fold";
     private static final String LIFT_MOTOR                  = "lift";
-//    private static final String ARM_MOTOR                   = "arm";
 
     private static final String DUMP_SERVO_1                = "dump1";
     private static final String DUMP_SERVO_2                = "dump2";
 
     private static final String CLAW_SERVO                  = "claw";
-//    private static final String PADDLE_SERVO                = "paddle";
-//    private static final String TILT_SERVO                  = "tilt";
 
     private static final String LIMIT_TOP                   = "limitTop";
     private static final String LIMIT_BOTTOM                = "limitBottom";
 
     private static final String LIMIT_FOLD                  = "limitFold";
 
-    static final double     HEADING_THRESHOLD       = 1 ;      // As tight as we can make it with an integer gyro
-    static final double     P_TURN_COEFF            = 0.1;     // Larger is more responsive, but also less stable
-    static final double     P_DRIVE_COEFF           = 0.15;     // Larger is more responsive, but also less stable
+    static final double     HEADING_THRESHOLD       = 0.01;      // As tight as we can make it with an integer gyro
+    static final double     P_TURN_COEFF            = 0.05;      // Larger is more responsive, but also less stable
+    static final double     P_DRIVE_COEFF           = 0.05;     // Larger is more responsive, but also less stable
 
 
 // Encoder Count Per rev
@@ -116,6 +116,9 @@ public class Robot
     static final double     WHEEL_DIAMETER_INCHES   = 4.0 ;     // For figuring circumference
     static final double     COUNTS_PER_INCH         = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) / (WHEEL_DIAMETER_INCHES * 3.1415);
 
+    Orientation             m_LastAngles  = new Orientation();
+    double                  m_GlobalAngle = 0;
+
     // ----------------------------------------------------------------------
     // Public Member Variables
     // ----------------------------------------------------------------------
@@ -126,21 +129,19 @@ public class Robot
     private ElapsedTime  m_runtime   = new ElapsedTime();
 
     private BNO055IMU m_imu                = null;
-    private DcMotorEx  m_leftFrontDrive      = null;
-    private DcMotorEx  m_leftRearDrive       = null;
-    private DcMotorEx  m_rightFrontDrive     = null;
-    private DcMotorEx  m_rightRearDrive      = null;
+
+    private DcMotor  m_leftFrontDrive      = null;
+    private DcMotor  m_leftRearDrive       = null;
+    private DcMotor  m_rightFrontDrive     = null;
+    private DcMotor  m_rightRearDrive      = null;
     public  DcMotor  m_intake              = null;
     private DcMotor  m_foldMotor           = null;
     private DcMotor  m_liftMotor           = null;
-//    private DcMotor  m_armMotor            = null;
 
     public  Servo    m_dump1               = null;
     public  Servo    m_dump2               = null;
 
     private Servo    m_claw                = null;
-//    public  Servo    m_paddle              = null;
-//    public  Servo    m_tilt                = null;
 
     // Using Analog inputs for Limit Switches due to
     // issue with hub not powering on when digital input held low
@@ -157,7 +158,6 @@ public class Robot
     // //////////////////////////////////////////////////////////////////////
 
     public Lift    Lift = null;
-//    public Arm     Arm  = null;
     public Fold    Fold = null;
 
     // //////////////////////////////////////////////////////////////////////
@@ -173,7 +173,7 @@ public class Robot
     // Initialize standard Hardware interfaces
     // //////////////////////////////////////////////////////////////////////
 
-    public void init( HardwareMap ahwMap )
+    public void init( HardwareMap ahwMap, boolean bUseIMU )
     {
         // ------------------------------------------------------------------
         // Save reference to Hardware map
@@ -185,59 +185,59 @@ public class Robot
         // algorithm here just reports accelerations to the logcat log; it doesn't actually
         // provide positional information.
 
-        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
+        if ( bUseIMU )
+        {
+            BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
 
-        parameters.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
-        parameters.accelUnit           = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
-        parameters.calibrationDataFile = "BNO055IMUCalibration.json"; // see the calibration sample opmode
-        parameters.loggingEnabled      = true;
-        parameters.loggingTag          = "IMU";
-        parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
+            parameters.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
+            parameters.accelUnit           = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
+            parameters.calibrationDataFile = "BNO055IMUCalibration.json"; // see the calibration sample opmode
+            parameters.loggingEnabled      = true;
+            parameters.loggingTag          = "IMU";
+            parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
 
-        // Retrieve and initialize the IMU. We expect the IMU to be attached to an I2C port
-        // on a Core Device Interface Module, configured to be a sensor of type "AdaFruit IMU",
-        // and named "imu".
+            // Retrieve and initialize the IMU. We expect the IMU to be attached to an I2C port
+            // on a Core Device Interface Module, configured to be a sensor of type "AdaFruit IMU",
+            // and named "imu".
 
-        m_imu = m_hwMap.get(BNO055IMU.class, GYRO);
+            m_imu = m_hwMap.get(BNO055IMU.class, GYRO);
 
-        m_imu.initialize(parameters);
+            m_imu.initialize(parameters);
+
+            LinearOpMode opMode = (LinearOpMode)m_opMode;
+
+            m_runtime.reset();
+
+            m_imu.startAccelerationIntegration(new Position(), new Velocity(), 1000);
+        }
 
         // ------------------------------------------------------------------
         // Define and Initialize Motors
         // ------------------------------------------------------------------
 
-        m_leftFrontDrive  = (DcMotorEx)m_hwMap.get( DcMotorEx.class, LEFT_FRONT_DRIVE_MOTOR    );
-        m_leftRearDrive   = (DcMotorEx)m_hwMap.get( DcMotorEx.class, LEFT_REAR_DRIVE_MOTOR     );
-        m_rightFrontDrive = (DcMotorEx)m_hwMap.get( DcMotorEx.class, RIGHT_FRONT_DRIVE_MOTOR   );
-        m_rightRearDrive  = (DcMotorEx)m_hwMap.get( DcMotorEx.class, RIGHT_REAR_DRIVE_MOTOR    );
+        m_leftFrontDrive  = m_hwMap.get( DcMotor.class, LEFT_FRONT_DRIVE_MOTOR    );
+        m_leftRearDrive   = m_hwMap.get( DcMotor.class, LEFT_REAR_DRIVE_MOTOR     );
+        m_rightFrontDrive = m_hwMap.get( DcMotor.class, RIGHT_FRONT_DRIVE_MOTOR   );
+        m_rightRearDrive  = m_hwMap.get( DcMotor.class, RIGHT_REAR_DRIVE_MOTOR    );
+
         m_intake          = m_hwMap.get( DcMotor.class, INTAKE_MOTOR              );
         m_foldMotor       = m_hwMap.get( DcMotor.class, FOLD_MOTOR                );
         m_liftMotor       = m_hwMap.get( DcMotor.class, LIFT_MOTOR                );
-//        m_armMotor        = m_hwMap.get( DcMotor.class, ARM_MOTOR                 );
 
         m_limitTop        = m_hwMap.get( AnalogInput.class   , LIMIT_TOP          );
         m_limitBottom     = m_hwMap.get( AnalogInput.class   , LIMIT_BOTTOM       );
         m_limitFold       = m_hwMap.get( RevTouchSensor.class, LIMIT_FOLD         );
 
         // ------------------------------------------------------------------
-        //
-        // ------------------------------------------------------------------
-
-        //m_limitTop   .setMode( DigitalChannel.Mode.INPUT );
-        //m_limitBottom.setMode( DigitalChannel.Mode.INPUT );
-
-        // ------------------------------------------------------------------
         // Set direction of drive motors (one side needs to be opposite)
         // ------------------------------------------------------------------
-
 //        m_leftFrontDrive  .setDirection( DcMotor.Direction.REVERSE );
 //        m_leftRearDrive   .setDirection( DcMotor.Direction.REVERSE );
 
-//        m_rightFrontDrive .setDirection( DcMotor.Direction.REVERSE );
-//        m_rightRearDrive  .setDirection( DcMotor.Direction.REVERSE );
+        m_rightFrontDrive .setDirection( DcMotor.Direction.REVERSE );
+        m_rightRearDrive  .setDirection( DcMotor.Direction.REVERSE );
 
         m_liftMotor       .setDirection( DcMotor.Direction.REVERSE );
-//        m_armMotor        .setDirection( DcMotor.Direction.REVERSE );
 
         // ------------------------------------------------------------------
         // Set all motors to zero power
@@ -250,7 +250,6 @@ public class Robot
         m_intake         .setPower( 0 );
         m_foldMotor      .setPower( 0 );
         m_liftMotor      .setPower( 0 );
-//        m_armMotor       .setPower( 0 );
 
         // ------------------------------------------------------------------
         // Set all motors run Mode
@@ -258,22 +257,21 @@ public class Robot
 
         m_leftFrontDrive  .setMode( DcMotor.RunMode.STOP_AND_RESET_ENCODER );
         m_rightFrontDrive .setMode( DcMotor.RunMode.STOP_AND_RESET_ENCODER );
+
         m_foldMotor      .setMode( DcMotor.RunMode.STOP_AND_RESET_ENCODER );
         m_liftMotor      .setMode (DcMotor.RunMode.STOP_AND_RESET_ENCODER );
-//        m_armMotor       .setMode (DcMotor.RunMode.STOP_AND_RESET_ENCODER );
 
-        m_leftFrontDrive .setMode( DcMotor.RunMode.RUN_USING_ENCODER );
-        m_leftRearDrive  .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER   );
-        m_rightFrontDrive.setMode( DcMotor.RunMode.RUN_USING_ENCODER );
-        m_rightRearDrive .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER   );
-        m_intake         .setMode( DcMotor.RunMode.RUN_USING_ENCODER   );
+        m_leftFrontDrive .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
+        m_leftRearDrive  .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
+        m_rightFrontDrive.setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
+        m_rightRearDrive .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
 
-        m_foldMotor      .setMode( DcMotor.RunMode.RUN_USING_ENCODER   );
-        m_liftMotor      .setMode( DcMotor.RunMode.RUN_USING_ENCODER   );
-//        m_armMotor       .setMode( DcMotor.RunMode.RUN_USING_ENCODER   );
+        m_intake         .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER   );
 
+        m_foldMotor      .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER   );
+        m_liftMotor      .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER   );
 
-//        m_armMotor.setZeroPowerBehavior( DcMotor.ZeroPowerBehavior.BRAKE );
+        m_foldMotor.setZeroPowerBehavior( DcMotor.ZeroPowerBehavior.BRAKE );
 
         // ------------------------------------------------------------------
         // Define and initialize ALL installed servos.
@@ -283,22 +281,13 @@ public class Robot
         m_dump2   = m_hwMap.get( Servo.class, DUMP_SERVO_2  );
         m_claw    = m_hwMap.get( Servo.class, CLAW_SERVO    );
 
-
-//        m_paddle = m_hwMap.get( Servo.class, PADDLE_SERVO);
-//        m_tilt   = m_hwMap.get( Servo.class, TILT_SERVO  );
-
         m_dump1.setDirection( Servo.Direction.REVERSE );
 
-//        m_dump  .setPosition( 1.0 );
-//        m_tilt  .setPosition( 0 );
-
         Lift = new Lift( m_liftMotor, m_limitTop, m_limitBottom );
-//        Arm  = new Arm ( m_armMotor, m_dump );
         Fold = new Fold( m_foldMotor, m_limitFold );
 
         SetDumpPosition( 0 );
         CloseClaw();
-//        CaptureElements();
     }
 
     // //////////////////////////////////////////////////////////////////////
@@ -308,7 +297,17 @@ public class Robot
     public void OpModeStarted()
     {
         // Start the logging of measured acceleration
-        m_imu.startAccelerationIntegration(new Position(), new Velocity(), 1000);
+//        if (m_imu != null)
+//            m_imu.startAccelerationIntegration(new Position(), new Velocity(), 1000);
+
+    }
+
+    public void OpModeStopped()
+    {
+        if ( m_imu != null )
+        {
+            m_imu.stopAccelerationIntegration();
+        }
 
     }
 
@@ -316,23 +315,38 @@ public class Robot
     //
     // //////////////////////////////////////////////////////////////////////
 
-    public void AddTelemtry(Telemetry telemetry)
+    void AddTelemtry(Telemetry telemetry)
     {
+        Orientation angles;
+
         // telemetry.addData("Sorter Pos",  "%f", m_dump.getPosition());
 //        telemetry.addData( "paddle Pos", "%f", m_paddle.getPosition());
 
         //telemetry.addData("Lift Pos",  "%d", Lift.CurrentPos());
+
+        if (m_imu != null) {
+            telemetry.addLine(m_imu.getCalibrationStatus().toString());
+            telemetry.addLine(m_imu.getSystemStatus().toShortString());
+
+            angles = m_imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+
+            telemetry.addData("Angular", "%.4f, %.4f, %.4f", angles.firstAngle, angles.secondAngle, angles.thirdAngle);
+
+            Position p = m_imu.getPosition();
+            telemetry.addData("Pos", "%.4f, %.4f, %.4f", p.z, p.y, p.x);
+        }
+
         telemetry.addData( "Fold Limit", "%b", m_limitFold.isPressed());
         telemetry.addData("Lift Pos",  "%d", Lift.CurrentPos());
         telemetry.addData("Fold Pos",  "%d", Fold.CurrentPos());
         telemetry.addData("L. W Pos",  "%d", GetLeftDrivePos());
         telemetry.addData("R. W Pos",  "%d", GetRightDrivePos());
 
-        telemetry.addData( "RR Pwrs", "%f", m_rightFrontDrive.getPower());
-        telemetry.addData( "LR Pwrs", "%f", m_leftFrontDrive.getPower());
+//        telemetry.addData( "RR Pwrs", "%f", m_rightFrontDrive.getPower());
+//        telemetry.addData( "LR Pwrs", "%f", m_leftFrontDrive.getPower());
 
-        telemetry.addData( "RF Pwrs", "%f", m_rightFrontDrive.getPower());
-        telemetry.addData( "LF Pwrs", "%f", m_leftFrontDrive.getPower());
+//        telemetry.addData( "RF Pwrs", "%f", m_rightFrontDrive.getPower());
+//        telemetry.addData( "LF Pwrs", "%f", m_leftFrontDrive.getPower());
 
     }
 
@@ -346,14 +360,6 @@ public class Robot
 
     public int GetLeftDrivePos () { return m_leftFrontDrive.getCurrentPosition(); }
     public int GetRightDrivePos() { return m_rightFrontDrive.getCurrentPosition(); }
-
-    // //////////////////////////////////////////////////////////////////////
-    // Paddle
-    // //////////////////////////////////////////////////////////////////////
-
-//    public void CaptureElements() { m_paddle.setPosition( 0.9 ); }
-//    public void ReleaseElements() { m_paddle.setPosition( 0.5 ); }
-//    public void SetPaddlePos(double dPos) { m_paddle.setPosition( dPos ); }
 
     // //////////////////////////////////////////////////////////////////////
     // Open & Close Claw Functions
@@ -383,13 +389,6 @@ public class Robot
     {
         return (( m_clawState == ClawStateEnum.Open) && m_claw.getPosition() <= 2);
     }
-
-    // //////////////////////////////////////////////////////////////////////
-    //
-    // //////////////////////////////////////////////////////////////////////
-
-//    public void TiltUp  () { m_tilt.setPosition( 1 ); }
-//    public void TiltDown() { m_tilt.setPosition( 0 ); }
 
     // //////////////////////////////////////////////////////////////////////
     //
@@ -436,15 +435,13 @@ public class Robot
 
         LinearOpMode opMode = (LinearOpMode)m_opMode;
 
-        if (opMode == null) {
+        if (opMode == null)
             return;
-        }
 
-        if ( opMode.opModeIsActive()) {
+        if ( opMode.opModeIsActive())
+        {
 
             // Determine new target position, and pass to motor controller
-
-            int nPos = m_leftFrontDrive .getCurrentPosition();
 
             newLeftTarget  = m_leftFrontDrive .getCurrentPosition() + (int)(leftInches  * COUNTS_PER_INCH);
             newRightTarget = m_rightFrontDrive.getCurrentPosition() + (int)(rightInches * COUNTS_PER_INCH);
@@ -459,16 +456,10 @@ public class Robot
             // reset the timeout time and start motion.
             m_runtime.reset();
 
-            m_leftFrontDrive.setTargetPositionTolerance( 100 );
-            m_rightFrontDrive.setTargetPositionTolerance( 100 );
-
-            m_leftFrontDrive.setVelocity( 0.1);
-            m_rightFrontDrive.setVelocity( 0.1);
-
             //SetDrivePower( Math.abs(speed), Math.abs(speed));
 
-            m_leftFrontDrive.setPower ( 1 ); //Math.abs(speed) );
-            m_rightFrontDrive.setPower( 1 ); //Math.abs(speed) );
+            m_leftFrontDrive.setPower ( Math.abs(speed) );
+            m_rightFrontDrive.setPower( Math.abs(speed) );
 
             // keep looping while we are still active, and there is time left, and both motors are running.
             // Note: We use (isBusy() && isBusy()) in the loop test, which means that when EITHER motor hits
@@ -477,14 +468,8 @@ public class Robot
             // However, if you require that BOTH motors have finished their moves before the robot continues
             // onto the next step, use (isBusy() || isBusy()) in the loop test.
             while (opMode.opModeIsActive() &&
-                    (m_runtime.seconds() < timeoutS) &&
-                    (m_leftFrontDrive.isBusy() && m_rightFrontDrive.isBusy())) {
-
-                if (m_leftFrontDrive.isBusy() == false)
-                    m_leftFrontDrive.setPower( 0 );
-
-                if (m_rightFrontDrive.isBusy() == false)
-                    m_rightFrontDrive.setPower( 0 );
+                   (m_runtime.seconds() < timeoutS) &&
+                   (m_leftFrontDrive.isBusy() || m_rightFrontDrive.isBusy())) {
 
                 // Display it for the driver.
 
@@ -494,35 +479,142 @@ public class Robot
                         m_rightFrontDrive.getCurrentPosition());
                 m_opMode.telemetry.update();
 
-             //   Lift.PeriodicCheck( 0 );
+                Lift.PeriodicCheck( 0 );
             }
 
             // Stop all motion;
             SetDrivePower( 0, 0);
 
-
             // Turn off RUN_TO_POSITION
-            m_leftFrontDrive .setMode( DcMotor.RunMode.RUN_USING_ENCODER );
-            m_rightFrontDrive.setMode( DcMotor.RunMode.RUN_USING_ENCODER );
+            m_leftFrontDrive .setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
+            m_rightFrontDrive.setMode( DcMotor.RunMode.RUN_WITHOUT_ENCODER );
 
             //  sleep(250);   // optional pause after each move
         }
     }
 
-    // //////////////////////////////////////////////////////////////////////
-    // TODO: Use encoders AND IMU (gyro) to drive a specific distance in a
-    //       straight line.
-    // //////////////////////////////////////////////////////////////////////
-
-    public void DriveStraigt( double dPower, int nInches )
+    public void gyroDrive ( double speed,
+                            double distance,
+                            double angle)
     {
-        // TODO
+        int     newLeftTarget;
+        int     newRightTarget;
+        int     moveCounts;
+        double  max;
+        double  error;
+        double  steer;
+        double  leftSpeed;
+        double  rightSpeed;
+
+        // Ensure that the opmode is still active
+        LinearOpMode opMode = (LinearOpMode)m_opMode;
+
+        if ((opMode == null) || (m_imu == null))
+            return;
+
+        if (opMode.opModeIsActive())
+        {
+            // get current angle
+            Orientation angles = m_imu.getAngularOrientation( AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+
+            double dTargetAngle = angle + angles.firstAngle;
+
+            // Determine new target position, and pass to motor controller
+            moveCounts = (int)(distance * COUNTS_PER_INCH);
+            newLeftTarget  = m_leftFrontDrive.getCurrentPosition() + moveCounts;
+            newRightTarget = m_rightFrontDrive.getCurrentPosition() + moveCounts;
+
+            // Set Target and Turn On RUN_TO_POSITION
+            m_leftFrontDrive.setTargetPosition(newLeftTarget);
+            m_rightFrontDrive.setTargetPosition(newRightTarget);
+
+            m_leftFrontDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            m_rightFrontDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+            // start motion.
+            speed = Range.clip(Math.abs(speed), 0.0, 1.0);
+            m_leftFrontDrive.setPower(speed);
+            m_rightFrontDrive.setPower(speed);
+
+            // keep looping while we are still active, and BOTH motors are running.
+            while (opMode.opModeIsActive() &&
+                    (m_leftFrontDrive.isBusy() && m_rightFrontDrive.isBusy())) {
+
+                // adjust relative speed based on heading error.
+                error = getError(dTargetAngle);
+                steer = getSteer(error, P_DRIVE_COEFF);
+
+                // if driving in reverse, the motor correction also needs to be reversed
+                if (distance < 0)
+                    steer *= -1.0;
+
+                leftSpeed = speed - steer;
+                rightSpeed = speed + steer;
+
+                // Normalize speeds if either one exceeds +/- 1.0;
+                max = Math.max(Math.abs(leftSpeed), Math.abs(rightSpeed));
+                if (max > 1.0)
+                {
+                    leftSpeed /= max;
+                    rightSpeed /= max;
+                }
+
+                m_leftFrontDrive.setPower(leftSpeed);
+                m_rightFrontDrive.setPower(rightSpeed);
+
+                // Display drive status for the driver.
+                opMode.telemetry.addData("Err/St",  "%5.1f/%5.1f",  error, steer);
+                opMode.telemetry.addData("Target",  "%7d:%7d",      newLeftTarget,  newRightTarget);
+                opMode.telemetry.addData("Actual",  "%7d:%7d",      m_leftFrontDrive.getCurrentPosition(),
+                        m_rightFrontDrive.getCurrentPosition());
+                opMode.telemetry.addData("Speed",   "%5.2f:%5.2f",  leftSpeed, rightSpeed);
+                opMode.telemetry.update();
+            }
+
+            // Stop all motion;
+            m_leftFrontDrive.setPower(0);
+            m_rightFrontDrive.setPower(0);
+
+            // Turn off RUN_TO_POSITION
+            m_leftFrontDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            m_rightFrontDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        }
+    }
+
+    /**
+     *  Method to spin on central axis to point in a new direction.
+     *  Move will stop if either of these conditions occur:
+     *  1) Move gets to the heading (angle)
+     *  2) Driver stops the opmode running.
+     *
+     * @param speed Desired speed of turn.
+     * @param angle      Absolute Angle (in Degrees) relative to last gyro reset.
+     *                   0 = fwd. +ve is CCW from fwd. -ve is CW from forward.
+     *                   If a relative angle is required, add/subtract from current heading.
+     */
+    public void gyroTurn (  double speed, double angle) {
+        LinearOpMode opMode = (LinearOpMode)m_opMode;
+
+        if ((opMode == null) || (m_imu == null))
+            return;
+
+        // get current angle
+        Orientation angles = m_imu.getAngularOrientation( AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+
+        double dTargetAngle = angle + angles.firstAngle;
+
+        // keep looping while we are still active, and not on heading.
+        while (opMode.opModeIsActive() && !onHeading(speed, dTargetAngle, P_TURN_COEFF)) {
+            // Update telemetry & Allow time for other processes to run.
+            opMode.telemetry.update();
+        }
     }
 
     // //////////////////////////////////////////////////////////////////////
     // TODO: Use IMU (gyro) or Encoders to turn specified number of degrees
     // //////////////////////////////////////////////////////////////////////
 
+    /*
     public void PivitTurn( double dSpeed, double dAngle )
     {
         // ------------------------------------------------------------------
@@ -545,7 +637,7 @@ public class Robot
         // SetDrivePower( 0, 0 );   // Stop Motots
 
     }
-
+*/
     /**
      * Perform one cycle of closed loop heading control.
      *
@@ -601,13 +693,10 @@ public class Robot
     public double getError(double targetAngle) {
 
         double robotError;
-        Orientation angles;
 
-        // calculate error in -179 to +180 range  (
-        angles = m_imu.getAngularOrientation( AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        double angle = getAngle();
 
-
-        robotError = targetAngle - angles.thirdAngle;     //gyro.getIntegratedZValue();
+        robotError = targetAngle - angle;     //gyro.getIntegratedZValue();
         while (robotError > 180)  robotError -= 360;
         while (robotError <= -180) robotError += 360;
         return robotError;
@@ -658,6 +747,128 @@ public class Robot
 
         // return scaled value.
         return dScale;
+    }
+
+
+
+    /**
+     * Resets the cumulative angle tracking to zero.
+     */
+    private void resetAngle()
+    {
+        if (m_imu != null)
+            m_LastAngles = m_imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+
+        m_GlobalAngle = 0;
+    }
+
+    /**
+     * Get current cumulative angle rotation from last reset.
+     * @return Angle in degrees. + = left, - = right.
+     */
+    private double getAngle()
+    {
+        if (m_imu == null)
+            return 0;
+
+        // We experimentally determined the Z axis is the axis we want to use for heading angle.
+        // We have to process the angle because the imu works in euler angles so the Z axis is
+        // returned as 0 to +180 or 0 to -180 rolling back to -179 or +179 when rotation passes
+        // 180 degrees. We detect this transition and track the total cumulative angle of rotation.
+
+        Orientation angles = m_imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+
+        double deltaAngle = angles.firstAngle - m_LastAngles.firstAngle;
+
+        if (deltaAngle < -180)
+            deltaAngle += 360;
+        else if (deltaAngle > 180)
+            deltaAngle -= 360;
+
+        m_GlobalAngle += deltaAngle;
+
+        m_LastAngles = angles;
+
+        return m_GlobalAngle;
+    }
+
+    /**
+     * See if we are moving in a straight line and if not return a power correction value.
+     * @return Power adjustment, + is adjust left - is adjust right.
+     */
+    private double checkDirection()
+    {
+        // The gain value determines how sensitive the correction is to direction changes.
+        // You will have to experiment with your robot to get small smooth direction changes
+        // to stay on a straight line.
+        double correction, angle, gain = .10;
+
+        angle = getAngle();
+
+        if (angle == 0)
+            correction = 0;             // no adjustment.
+        else
+            correction = -angle;        // reverse sign of angle for correction.
+
+        correction = correction * gain;
+
+        return correction;
+    }
+
+    /**
+     * Rotate left or right the number of degrees. Does not support turning more than 180 degrees.
+     * @param degrees Degrees to turn, + is left - is right
+     */
+    public void rotate( double degrees, double power)
+    {
+        double  leftPower, rightPower;
+
+        LinearOpMode opMode = (LinearOpMode)m_opMode;
+
+        if (opMode == null)
+            return;
+
+            // restart imu movement tracking.
+        resetAngle();
+
+        // getAngle() returns + when rotating counter clockwise (left) and - when rotating
+        // clockwise (right).
+
+        if (degrees < 0)
+        {   // turn right.
+            leftPower = -power;
+            rightPower = power;
+        }
+        else if (degrees > 0)
+        {   // turn left.
+            leftPower = power;
+            rightPower = -power;
+        }
+        else return;
+
+        // set power to rotate.
+        SetDrivePower( leftPower, rightPower );
+
+        // rotate until turn is completed.
+        if (degrees < 0)
+        {
+            // On right turn we have to get off zero first.
+            while (opMode.opModeIsActive() && getAngle() == 0) {}
+
+            while (opMode.opModeIsActive() && getAngle() > degrees) {}
+        }
+        else    // left turn.
+            while (opMode.opModeIsActive() && getAngle() < degrees) {}
+
+        // turn the motors off.
+        SetDrivePower( 0, 0 );
+
+        // wait for rotation to stop.
+
+        opMode.sleep( 1000 );
+
+        // reset angle tracking on new heading.
+        resetAngle();
     }
 }
 

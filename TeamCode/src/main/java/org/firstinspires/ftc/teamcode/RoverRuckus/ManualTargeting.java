@@ -76,7 +76,7 @@ public abstract class ManualTargeting< T >
 
         if (!bHoldPosition)
         {
-            m_motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            m_motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
             m_eTargetPos = GetNotTargetingValue();
 

@@ -111,7 +111,7 @@ public class goldinmiddle extends LinearOpMode {
          * Initialize the drive system variables.
          * The init() method of the hardware class does all the work here
          */
-        robot.init(hardwareMap);
+        robot.init(hardwareMap, true);
 
         // Wait for the game to start (driver presses PLAY)
         waitForStart();

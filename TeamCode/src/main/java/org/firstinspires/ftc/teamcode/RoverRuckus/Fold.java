@@ -54,7 +54,8 @@ public class Fold extends Targetable< Fold.PosEnum >   //ManualTargeting< Fold.P
     //
     // //////////////////////////////////////////////////////////////////////
 
-    @Override protected Fold.PosEnum GetNotTargetingValue() { return PosEnum.None; }
+    @Override protected Fold.PosEnum GetNotTargetingValue() { return PosEnum.None;  }
+    @Override protected Fold.PosEnum GetTopTarget()         { return PosEnum.Floor; }
 
     // //////////////////////////////////////////////////////////////////////
     //
